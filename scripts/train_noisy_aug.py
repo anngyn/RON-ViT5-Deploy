@@ -170,7 +170,7 @@ def main(config_path):
         logging.info(f"\nEvaluating {noise_type} noise...")
         noisy_dataset = NoisyVQADataset(
             test_qa, test_ocr, tokenizer, generator,
-            augmentation_ratio=0.0, noise_types=[noise_type], noise_level=2,
+            augmentation_ratio=1.0, noise_types=[noise_type], noise_level=2,
             include_clean=False
         )
         noisy_loader = DataLoader(noisy_dataset, batch_size=16, shuffle=False)
