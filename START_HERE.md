@@ -82,7 +82,8 @@ bash run_all_16gb.sh    # 16GB GPU
 ## Prerequisites
 
 1. **GPU rental account** (Vast.ai / Runpod / Colab Pro)
-2. **Kaggle account** (download ReceiptVQA dataset)
+2. **Dataset**: Google Drive link (auto-download with script)
+   - https://drive.google.com/file/d/1-LJyQ27HNmfCCuE1AAnwF2WYm84VlWPS
 3. **Git basics** (clone, commit)
 
 ## Quick Start (TL;DR)
@@ -98,11 +99,8 @@ git clone https://github.com/YOUR_REPO/RON-ViT5-Deploy.git
 cd RON-ViT5-Deploy
 bash setup.sh
 
-# 3. Download dataset
-pip install kaggle
-mkdir ~/.kaggle && nano ~/.kaggle/kaggle.json  # Paste token
-kaggle datasets download -d anlgyn/receiptvqa -p data/
-unzip data/receiptvqa.zip -d data/
+# 3. Download dataset (auto from Drive)
+bash download_dataset.sh
 
 # 4. Run training
 bash run_baseline_and_noisy.sh  # 2 methods (~2h)

@@ -53,7 +53,7 @@ class TextOnlyVQADataset(Dataset):
 
     def create_features(self, ques, words, ans):
         inputs = [f"question: {q.strip()} context: {' '.join(ocr)}" for q, ocr in zip(ques, words)]
-        outputs = [self.tokenizer.pad_token + a + self.tokenizer.eos_token for a in ans]
+        outputs = [self.tokenizer.pad_token + str(a) + self.tokenizer.eos_token for a in ans]
 
         encoding = self.tokenizer(inputs, add_special_tokens=True, max_length=self.max_input_length,
                                   padding="max_length", truncation=True)
@@ -89,10 +89,13 @@ class NoisyVQADataset(Dataset):
             clean_df = dataframe.copy()
             self.batch_processing(clean_df, batch_process, apply_noise=False)
 
-        # Noisy samples
+        # Noisy samples. Evaluation with include_clean=False and ratio=1.0 must
+        # keep each item exactly once instead of bootstrapping duplicates.
         n_augment = int(len(dataframe) * augmentation_ratio)
-        noisy_df = dataframe.sample(n=n_augment, replace=True, random_state=42).reset_index(drop=True)
-        self.batch_processing(noisy_df, batch_process, apply_noise=True)
+        if n_augment > 0:
+            replace = n_augment > len(dataframe)
+            noisy_df = dataframe.sample(n=n_augment, replace=replace, random_state=42).reset_index(drop=True)
+            self.batch_processing(noisy_df, batch_process, apply_noise=True)
 
     def __len__(self):
         return len(self.data['input_ids'])
@@ -134,7 +137,7 @@ class NoisyVQADataset(Dataset):
 
     def create_features(self, ques, words, ans):
         inputs = [f"question: {q.strip()} context: {' '.join(ocr)}" for q, ocr in zip(ques, words)]
-        outputs = [self.tokenizer.pad_token + a + self.tokenizer.eos_token for a in ans]
+        outputs = [self.tokenizer.pad_token + str(a) + self.tokenizer.eos_token for a in ans]
 
         encoding = self.tokenizer(inputs, add_special_tokens=True, max_length=self.max_input_length,
                                   padding="max_length", truncation=True)
@@ -211,7 +214,7 @@ class PairedVQADataset(Dataset):
 
     def create_features(self, ques, words, ans):
         inputs = [f"question: {q.strip()} context: {' '.join(ocr)}" for q, ocr in zip(ques, words)]
-        outputs = [self.tokenizer.pad_token + a + self.tokenizer.eos_token for a in ans]
+        outputs = [self.tokenizer.pad_token + str(a) + self.tokenizer.eos_token for a in ans]
 
         encoding = self.tokenizer(inputs, add_special_tokens=True, max_length=self.max_input_length,
                                   padding="max_length", truncation=True)

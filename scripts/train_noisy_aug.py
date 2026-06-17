@@ -3,20 +3,27 @@ import os
 import sys
 import yaml
 import logging
-import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 from transformers import T5Tokenizer, T5ForConditionalGeneration
-from tqdm import tqdm
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+from src.data import load_data
 from src.dataset import TextOnlyVQADataset, NoisyVQADataset
 from src.noise import OCRNoiseGenerator
 from src.train import train_epoch_standard
 from src.evaluate import evaluate, compute_anls
+
+
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+
+def resolve_project_path(path):
+    """Resolve config paths from project root."""
+    return path if os.path.isabs(path) else os.path.join(PROJECT_ROOT, path)
 
 
 def setup_logging(log_file):
@@ -32,47 +39,13 @@ def setup_logging(log_file):
     )
 
 
-def load_data(data_dir, subset_ratio=0.2):
-    """Load and subsample ReceiptVQA dataset."""
-    train_qa = pd.read_csv(f'{data_dir}/ReceiptVQA_annotations/ReceiptVQA_annotations/ReceiptVQA_train.csv')
-    dev_qa = pd.read_csv(f'{data_dir}/ReceiptVQA_annotations/ReceiptVQA_annotations/ReceiptVQA_dev.csv')
-    test_qa = pd.read_csv(f'{data_dir}/ReceiptVQA_annotations/ReceiptVQA_annotations/ReceiptVQA_test.csv')
-
-    ocr_dir = f'{data_dir}/features/google_ocr/google_ocr'
-
-    def create_subset(qa_df, ratio):
-        unique_imgs = qa_df['image_id'].unique()
-        n_subset = int(len(unique_imgs) * ratio)
-        sampled_imgs = np.random.choice(unique_imgs, size=n_subset, replace=False)
-
-        qa_subset = qa_df[qa_df['image_id'].isin(sampled_imgs)].reset_index(drop=True)
-
-        ocr_data = []
-        for img_id in tqdm(sampled_imgs, desc="Loading OCR"):
-            ocr_path = f"{ocr_dir}/{img_id}.npy"
-            if os.path.exists(ocr_path):
-                ocr = np.load(ocr_path, allow_pickle=True).item()
-                ocr_data.append({'image_id': img_id, 'texts': ocr['texts']})
-
-        ocr_df = pd.DataFrame(ocr_data)
-        return qa_subset, ocr_df
-
-    np.random.seed(42)
-    train_qa, train_ocr = create_subset(train_qa, subset_ratio)
-    dev_qa, dev_ocr = create_subset(dev_qa, subset_ratio)
-    test_qa, test_ocr = create_subset(test_qa, subset_ratio)
-
-    logging.info(f"Train: {len(train_qa)} QA pairs")
-    logging.info(f"Dev:   {len(dev_qa)} QA pairs")
-    logging.info(f"Test:  {len(test_qa)} QA pairs")
-
-    return (train_qa, train_ocr), (dev_qa, dev_ocr), (test_qa, test_ocr)
-
-
 def main(config_path):
     # Load config
     with open(config_path) as f:
         config = yaml.safe_load(f)
+
+    for key in ['data_dir', 'output_dir', 'results_file', 'log_file']:
+        config[key] = resolve_project_path(config[key])
 
     setup_logging(config['log_file'])
     logging.info(f"Config: {config_path}")
@@ -104,8 +77,16 @@ def main(config_path):
         max_output_length=config['max_output_length'],
         include_clean=True  # Clean + noisy
     )
-    dev_dataset = TextOnlyVQADataset(dev_qa, dev_ocr, tokenizer)
-    test_dataset = TextOnlyVQADataset(test_qa, test_ocr, tokenizer)
+    dev_dataset = TextOnlyVQADataset(
+        dev_qa, dev_ocr, tokenizer,
+        max_input_length=config['max_input_length'],
+        max_output_length=config['max_output_length']
+    )
+    test_dataset = TextOnlyVQADataset(
+        test_qa, test_ocr, tokenizer,
+        max_input_length=config['max_input_length'],
+        max_output_length=config['max_output_length']
+    )
 
     train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
     dev_loader = DataLoader(dev_dataset, batch_size=16, shuffle=False)
@@ -171,6 +152,8 @@ def main(config_path):
         noisy_dataset = NoisyVQADataset(
             test_qa, test_ocr, tokenizer, generator,
             augmentation_ratio=1.0, noise_types=[noise_type], noise_level=2,
+            max_input_length=config['max_input_length'],
+            max_output_length=config['max_output_length'],
             include_clean=False
         )
         noisy_loader = DataLoader(noisy_dataset, batch_size=16, shuffle=False)
