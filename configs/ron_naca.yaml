@@ -1,0 +1,27 @@
+# RON-NACA: Adapter + Consistency (full method)
+method: ron_naca
+model_name: VietAI/vit5-base
+
+# Training
+batch_size: 8
+learning_rate: 5.0e-4  # Higher LR for adapter training
+num_epochs: 3
+subset_ratio: 0.2
+
+# Model
+freeze_base: true
+bottleneck_dim: 64
+beta: 0.5  # Consistency loss weight
+
+# Data
+max_input_length: 256
+max_output_length: 64
+use_paired_data: true
+noise_types: [mixed, char, money, date]
+noise_level: 2
+
+# Paths
+data_dir: data/ReceiptVQA-Dataset
+output_dir: outputs/models/ron_naca_full
+results_file: outputs/results/ron_naca_full_results.csv
+log_file: outputs/logs/ron_naca_full.log

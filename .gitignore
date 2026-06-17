@@ -1,0 +1,23 @@
+# Data
+data/
+*.npy
+*.csv
+
+# Outputs
+outputs/
+*.pth
+*.pt
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.ipynb_checkpoints/
+
+# Logs
+*.log
+
+# System
+.DS_Store
+Thumbs.db

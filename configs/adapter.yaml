@@ -1,0 +1,27 @@
+# Adapter Only: ViT5 + adapter (no consistency)
+method: adapter
+model_name: VietAI/vit5-base
+
+# Training
+batch_size: 8
+learning_rate: 5.0e-4  # Higher LR for adapter-only training
+num_epochs: 3
+subset_ratio: 0.2
+
+# Model
+freeze_base: true
+bottleneck_dim: 64
+
+# Data
+max_input_length: 256
+max_output_length: 64
+use_noisy_aug: true
+augmentation_ratio: 1.0
+noise_types: [mixed, char, money, date]
+noise_level: 2
+
+# Paths
+data_dir: data/ReceiptVQA-Dataset
+output_dir: outputs/models/adapter_only
+results_file: outputs/results/adapter_only_results.csv
+log_file: outputs/logs/adapter_only.log

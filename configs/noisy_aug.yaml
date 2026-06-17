@@ -1,0 +1,23 @@
+# Noisy Augmentation: ViT5 on clean + noisy data
+method: noisy_aug
+model_name: VietAI/vit5-base
+
+# Training
+batch_size: 8
+learning_rate: 5.0e-5
+num_epochs: 3
+subset_ratio: 0.2
+
+# Data
+max_input_length: 256
+max_output_length: 64
+use_noisy_aug: true
+augmentation_ratio: 1.0  # 1:1 clean to noisy ratio
+noise_types: [mixed, char, money, date]
+noise_level: 2
+
+# Paths
+data_dir: data/ReceiptVQA-Dataset
+output_dir: outputs/models/noisy_aug
+results_file: outputs/results/noisy_aug_results.csv
+log_file: outputs/logs/noisy_aug.log

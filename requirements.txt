@@ -1,0 +1,9 @@
+torch>=2.0.0
+transformers==4.46.3
+tokenizers==0.20.3
+sentencepiece==0.2.0
+pandas
+numpy
+tqdm
+scikit-learn
+pyyaml

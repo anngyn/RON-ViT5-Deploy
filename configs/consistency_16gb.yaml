@@ -1,0 +1,26 @@
+# Consistency Only: Optimized for 16GB GPU
+method: consistency
+model_name: VietAI/vit5-base
+
+# Training - REDUCED BATCH
+batch_size: 4  # Was 8, reduced for paired forward passes
+learning_rate: 5.0e-5
+num_epochs: 3
+subset_ratio: 0.2
+
+# Model
+freeze_base: false
+beta: 0.5
+
+# Data
+max_input_length: 256
+max_output_length: 64
+use_paired_data: true
+noise_types: [mixed, char, money, date]
+noise_level: 2
+
+# Paths
+data_dir: data/ReceiptVQA-Dataset
+output_dir: outputs/models/consistency_only
+results_file: outputs/results/consistency_only_results.csv
+log_file: outputs/logs/consistency_only.log
