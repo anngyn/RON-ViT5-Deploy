@@ -35,20 +35,30 @@ bash setup.sh
 
 ## 3. Download Dataset
 
+**Option A: Interactive script (easiest)**
 ```bash
-# Kaggle API
+bash download_dataset.sh
+# Select option 1 (Kaggle) or 2 (Google Drive)
+# Follow prompts
+```
+
+**Option B: Kaggle API (manual)**
+```bash
+# Install kaggle
 pip install kaggle
+
+# Setup credentials
 mkdir -p ~/.kaggle
 nano ~/.kaggle/kaggle.json
-# Paste token:
-# {"username":"YOUR_USERNAME","key":"YOUR_KEY"}
+# Paste: {"username":"YOUR_USERNAME","key":"YOUR_KEY"}
+# Get from: https://www.kaggle.com/settings (API section)
 # Save: Ctrl+O, Enter, Ctrl+X
 
 chmod 600 ~/.kaggle/kaggle.json
 
-# Download
+# Download & extract
 kaggle datasets download -d anlgyn/receiptvqa -p data/
-unzip data/receiptvqa.zip -d data/
+cd data && unzip receiptvqa.zip && cd ..
 ```
 
 ## 4. Verify Setup

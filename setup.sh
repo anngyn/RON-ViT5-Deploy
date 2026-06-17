@@ -7,26 +7,63 @@ echo "=== RON-ViT5 Setup ==="
 echo "Installing dependencies..."
 pip install -r requirements.txt
 
-# Download dataset from Kaggle (requires kaggle.json in ~/.kaggle/)
-echo "Downloading ReceiptVQA dataset..."
-if [ ! -d "data" ]; then
-    mkdir -p data
+# Setup data directory
+mkdir -p data
 
-    # Option 1: Kaggle API (uncomment if using)
-    # pip install kaggle
-    # kaggle datasets download -d anlgyn/receiptvqa -p data/
-    # unzip data/receiptvqa.zip -d data/
+# Check if dataset already exists
+if [ -d "data/ReceiptVQA-Dataset" ]; then
+    echo "✓ Dataset already exists in data/"
+else
+    echo "Downloading ReceiptVQA dataset..."
 
-    # Option 2: Google Drive (provide your own link)
-    # gdown <YOUR_GDRIVE_FILE_ID> -O data/receiptvqa.zip
-    # unzip data/receiptvqa.zip -d data/
+    # Try Kaggle API first
+    if [ -f "$HOME/.kaggle/kaggle.json" ]; then
+        echo "Using Kaggle API..."
+        pip install -q kaggle
+        kaggle datasets download -d anlgyn/receiptvqa -p data/
 
-    echo "⚠️  Manual step required:"
-    echo "   Upload ReceiptVQA dataset to ./data/"
-    echo "   Expected structure:"
-    echo "     data/ReceiptVQA-Dataset/"
-    echo "       ├── ReceiptVQA_annotations/"
-    echo "       └── features/google_ocr/google_ocr/"
+        echo "Extracting dataset..."
+        cd data
+        unzip -q receiptvqa.zip
+        rm receiptvqa.zip
+        cd ..
+        echo "✓ Dataset downloaded from Kaggle"
+    else
+        echo ""
+        echo "⚠️  Kaggle credentials not found"
+        echo ""
+        echo "Setup options:"
+        echo ""
+        echo "Option 1: Kaggle API (recommended)"
+        echo "  1. Get API token from: https://www.kaggle.com/settings"
+        echo "  2. Create ~/.kaggle/kaggle.json:"
+        echo "     mkdir -p ~/.kaggle"
+        echo "     nano ~/.kaggle/kaggle.json"
+        echo "  3. Paste token JSON and save"
+        echo "  4. chmod 600 ~/.kaggle/kaggle.json"
+        echo "  5. Re-run: bash setup.sh"
+        echo ""
+        echo "Option 2: Manual upload"
+        echo "  1. Download from: https://www.kaggle.com/datasets/anlgyn/receiptvqa"
+        echo "  2. Upload to server and extract to: ./data/ReceiptVQA-Dataset/"
+        echo ""
+        echo "Option 3: Google Drive (if you have backup)"
+        echo "  pip install gdown"
+        echo "  gdown <DRIVE_FILE_ID> -O data/receiptvqa.zip"
+        echo "  cd data && unzip receiptvqa.zip && cd .."
+        echo ""
+    fi
+fi
+
+# Verify dataset structure
+if [ -d "data/ReceiptVQA-Dataset/ReceiptVQA_annotations" ] && [ -d "data/ReceiptVQA-Dataset/features/google_ocr" ]; then
+    echo "✓ Dataset structure verified"
+else
+    echo "⚠️  Warning: Dataset structure incomplete"
+    echo "Expected:"
+    echo "  data/ReceiptVQA-Dataset/"
+    echo "    ├── ReceiptVQA_annotations/ReceiptVQA_annotations/"
+    echo "    └── features/google_ocr/google_ocr/"
 fi
 
 # Create output directories
