@@ -40,7 +40,7 @@ def setup_logging(log_file):
     )
 
 
-def main(config_path):
+def main(config_path, skip_final_eval=False):
     # Load config
     with open(config_path) as f:
         config = yaml.safe_load(f)
@@ -84,15 +84,8 @@ def main(config_path):
         max_input_length=config['max_input_length'],
         max_output_length=config['max_output_length']
     )
-    test_dataset = TextOnlyVQADataset(
-        test_qa, test_ocr, tokenizer,
-        max_input_length=config['max_input_length'],
-        max_output_length=config['max_output_length']
-    )
-
     train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
     dev_loader = DataLoader(dev_dataset, batch_size=16, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
 
     logging.info(f"Train samples: {len(train_dataset)} (clean + noisy)")
     logging.info(f"Train batches: {len(train_loader)}")
@@ -132,9 +125,20 @@ def main(config_path):
 
     logging.info(f"\nBest Dev ANLS: {best_dev_anls:.4f}")
 
+    if skip_final_eval:
+        logging.info("Skipping final test/noise evaluation; flow runner handles it.")
+        return
+
     # Load best model
     model = T5ForConditionalGeneration.from_pretrained(config['output_dir'])
     model.to(device)
+
+    test_dataset = TextOnlyVQADataset(
+        test_qa, test_ocr, tokenizer,
+        max_input_length=config['max_input_length'],
+        max_output_length=config['max_output_length']
+    )
+    test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
 
     # Evaluate on clean test
     logging.info("\n" + "=" * 60)
@@ -193,5 +197,10 @@ if __name__ == '__main__':
         default=os.path.join(os.path.dirname(__file__), '..', 'configs', 'noisy_aug.yaml'),
         help='Path to YAML config file.',
     )
+    parser.add_argument(
+        '--skip-final-eval',
+        action='store_true',
+        help='Skip built-in clean/noisy test evaluation after training.',
+    )
     args = parser.parse_args()
-    main(args.config)
+    main(args.config, skip_final_eval=args.skip_final_eval)

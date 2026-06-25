@@ -5,7 +5,7 @@ echo "=== Flow 3: Consistency ==="
 echo "Train on paired clean/noisy data with consistency loss. Eval on clean + 14 noises @ L2."
 echo ""
 
-python scripts/train_consistency.py --config configs/consistency_16gb.yaml
+python scripts/train_consistency.py --config configs/consistency_16gb.yaml --skip-final-eval
 
 echo ""
 echo "Evaluating consistency model on clean + 14 noises @ L2"

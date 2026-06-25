@@ -5,7 +5,7 @@ echo "=== Flow 1: ViT_clean ==="
 echo "Train on clean data. Eval on clean + 14 noises @ L2."
 echo ""
 
-python scripts/train_baseline.py --config configs/baseline.yaml
+python scripts/train_baseline.py --config configs/baseline.yaml --skip-final-eval
 
 echo ""
 echo "Evaluating baseline on clean + 14 noises @ L2"

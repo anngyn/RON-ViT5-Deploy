@@ -5,7 +5,7 @@ echo "=== Flow 2: ViT_aug ==="
 echo "Train on clean + augmented data. Eval on clean + 14 noises @ L2."
 echo ""
 
-python scripts/train_noisy_aug.py --config configs/noisy_aug.yaml
+python scripts/train_noisy_aug.py --config configs/noisy_aug.yaml --skip-final-eval
 
 echo ""
 echo "Evaluating noisy augmentation on clean + 14 noises @ L2"

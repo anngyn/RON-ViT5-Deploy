@@ -13,7 +13,7 @@ if ! command -v python &> /dev/null; then
 fi
 
 echo "1/3 Train baseline"
-python scripts/train_baseline.py --config configs/baseline.yaml
+python scripts/train_baseline.py --config configs/baseline.yaml --skip-final-eval
 
 echo ""
 echo "1/3 Eval baseline on clean + 14 noises @ L2"
@@ -26,7 +26,7 @@ python scripts/eval_noise_grid.py \
 
 echo ""
 echo "2/3 Train noisy augmentation"
-python scripts/train_noisy_aug.py --config configs/noisy_aug.yaml
+python scripts/train_noisy_aug.py --config configs/noisy_aug.yaml --skip-final-eval
 
 echo ""
 echo "2/3 Eval noisy augmentation on clean + 14 noises @ L2"
@@ -39,7 +39,7 @@ python scripts/eval_noise_grid.py \
 
 echo ""
 echo "3/3 Train consistency"
-python scripts/train_consistency.py --config configs/consistency_16gb.yaml
+python scripts/train_consistency.py --config configs/consistency_16gb.yaml --skip-final-eval
 
 echo ""
 echo "3/3 Eval consistency on clean + 14 noises @ L2"
