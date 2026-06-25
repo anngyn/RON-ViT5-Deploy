@@ -6,7 +6,7 @@ model_name: VietAI/vit5-base
 batch_size: 8
 learning_rate: 5.0e-5
 num_epochs: 3
-subset_ratio: 0.2  # Use 20% of dataset
+subset_ratio: 1.0  # Use full dataset
 
 # Data
 max_input_length: 256

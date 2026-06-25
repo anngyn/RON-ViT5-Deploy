@@ -3,6 +3,14 @@ import torch
 from tqdm import tqdm
 from src.models import consistency_loss
 
+def _get_encoder(model):
+    """Return encoder for wrapped or plain T5 models."""
+    if hasattr(model, 'model') and hasattr(model.model, 'encoder'):
+        return model.model.encoder
+    if hasattr(model, 'encoder'):
+        return model.encoder
+    raise AttributeError("Model does not expose an encoder")
+
 
 def train_epoch_standard(model, dataloader, optimizer, tokenizer, device, epoch_num):
     """
@@ -87,7 +95,8 @@ def train_epoch_consistency(model, dataloader, optimizer, tokenizer, device, epo
             h_clean = outputs_clean.encoder_hidden
         else:
             # For base T5 without adapter (consistency-only method)
-            h_clean = model.model.encoder(
+            encoder = _get_encoder(model)
+            h_clean = encoder(
                 input_ids=clean_input_ids,
                 attention_mask=clean_attention_mask,
                 return_dict=True
@@ -109,7 +118,8 @@ def train_epoch_consistency(model, dataloader, optimizer, tokenizer, device, epo
         if hasattr(outputs_noisy, 'encoder_hidden'):
             h_noisy = outputs_noisy.encoder_hidden
         else:
-            h_noisy = model.model.encoder(
+            encoder = _get_encoder(model)
+            h_noisy = encoder(
                 input_ids=noisy_input_ids,
                 attention_mask=noisy_attention_mask,
                 return_dict=True

@@ -6,6 +6,21 @@ echo "=== Prepare ReceiptVQA Dataset ==="
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_ROOT"
 
+extract_nested_archives() {
+    local base="$1"
+
+    if [ -f "$base/ReceiptVQA_annotations.zip" ] && [ ! -d "$base/ReceiptVQA_annotations" ]; then
+        echo "Extracting nested annotations zip..."
+        unzip -q "$base/ReceiptVQA_annotations.zip" -d "$base"
+    fi
+
+    if [ -f "$base/features/google_ocr.zip" ] && [ ! -d "$base/features/google_ocr" ]; then
+        echo "Extracting nested OCR zip..."
+        mkdir -p "$base/features"
+        unzip -q "$base/features/google_ocr.zip" -d "$base/features"
+    fi
+}
+
 verify_dataset() {
     local base="$1"
     local ann_dir=""
@@ -61,7 +76,7 @@ fi
 
 if [ -n "$zip_path" ]; then
     echo "Extracting $zip_path..."
-    unzip -q "$zip_path" -d .
+    unzip -q "$zip_path" -d data
 else
     echo "No local ReceiptVQA zip found. Trying Kaggle API..."
     if [ ! -f "$HOME/.kaggle/kaggle.json" ]; then
@@ -73,6 +88,11 @@ else
     kaggle datasets download -d anlgyn/receiptvqa -p data/
     unzip -q data/receiptvqa.zip -d data
     rm -f data/receiptvqa.zip
+fi
+
+extract_nested_archives "data/ReceiptVQA-Dataset"
+if [ -d "ReceiptVQA-Dataset" ]; then
+    extract_nested_archives "ReceiptVQA-Dataset"
 fi
 
 if verify_dataset "data/ReceiptVQA-Dataset"; then

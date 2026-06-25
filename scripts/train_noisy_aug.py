@@ -1,4 +1,5 @@
 """Train ViT5 with noisy augmentation."""
+import argparse
 import os
 import sys
 import yaml
@@ -73,6 +74,7 @@ def main(config_path):
         augmentation_ratio=config['augmentation_ratio'],
         noise_types=config['noise_types'],
         noise_level=config['noise_level'],
+        noise_levels=config.get('noise_levels'),
         max_input_length=config['max_input_length'],
         max_output_length=config['max_output_length'],
         include_clean=True  # Clean + noisy
@@ -185,5 +187,11 @@ def main(config_path):
 
 
 if __name__ == '__main__':
-    config_path = os.path.join(os.path.dirname(__file__), '..', 'configs', 'noisy_aug.yaml')
-    main(config_path)
+    parser = argparse.ArgumentParser(description="Train ViT5 with noisy augmentation.")
+    parser.add_argument(
+        '--config',
+        default=os.path.join(os.path.dirname(__file__), '..', 'configs', 'noisy_aug.yaml'),
+        help='Path to YAML config file.',
+    )
+    args = parser.parse_args()
+    main(args.config)

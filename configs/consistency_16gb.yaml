@@ -6,7 +6,7 @@ model_name: VietAI/vit5-base
 batch_size: 4  # Was 8, reduced for paired forward passes
 learning_rate: 5.0e-5
 num_epochs: 3
-subset_ratio: 0.2
+subset_ratio: 1.0
 
 # Model
 freeze_base: false
@@ -16,8 +16,10 @@ beta: 0.5
 max_input_length: 256
 max_output_length: 64
 use_paired_data: true
-noise_types: [mixed, char, money, date]
+noise_types: [accent_removal, tone_confusion, vowel_diacritic_confusion, dd_confusion, character_confusion, glyph_confusion, character_deletion, token_deletion, line_shuffle, token_split, money_noise, date_noise, code_noise, mixed_noise]
 noise_level: 2
+noise_levels: [1, 2]
+report_noise_level: 2
 
 # Paths
 data_dir: data/ReceiptVQA-Dataset

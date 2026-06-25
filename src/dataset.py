@@ -68,6 +68,7 @@ class NoisyVQADataset(Dataset):
 
     def __init__(self, qa_df, ocr_df, tokenizer, noise_generator,
                  augmentation_ratio=1.0, noise_types=['mixed'], noise_level=2,
+                 noise_levels=None,
                  batch_process=128, max_input_length=256, max_output_length=64,
                  include_clean=True):
         super().__init__()
@@ -75,6 +76,7 @@ class NoisyVQADataset(Dataset):
         self.noise_generator = noise_generator
         self.noise_types = noise_types
         self.noise_level = noise_level
+        self.noise_levels = noise_levels or [noise_level]
         self.max_input_length = max_input_length
         self.max_output_length = max_output_length
 
@@ -122,7 +124,8 @@ class NoisyVQADataset(Dataset):
                 for text_list in texts:
                     clean_text = ' '.join(text_list)
                     noise_type = random.choice(self.noise_types)
-                    noisy_text = self.noise_generator.apply_noise(clean_text, noise_type, self.noise_level)
+                    noise_level = random.choice(self.noise_levels)
+                    noisy_text = self.noise_generator.apply_noise(clean_text, noise_type, noise_level)
                     noisy_texts.append(noisy_text.split())
                 texts = noisy_texts
 
@@ -151,13 +154,14 @@ class PairedVQADataset(Dataset):
     """Paired clean/noisy samples for consistency loss."""
 
     def __init__(self, qa_df, ocr_df, tokenizer, noise_generator,
-                 noise_types=['mixed'], noise_level=2,
+                 noise_types=['mixed'], noise_level=2, noise_levels=None,
                  batch_process=128, max_input_length=256, max_output_length=64):
         super().__init__()
         self.tokenizer = tokenizer
         self.noise_generator = noise_generator
         self.noise_types = noise_types
         self.noise_level = noise_level
+        self.noise_levels = noise_levels or [noise_level]
         self.max_input_length = max_input_length
         self.max_output_length = max_output_length
 
@@ -199,7 +203,8 @@ class PairedVQADataset(Dataset):
                 for text_list in texts:
                     clean_text = ' '.join(text_list)
                     noise_type = random.choice(self.noise_types)
-                    noisy_text = self.noise_generator.apply_noise(clean_text, noise_type, self.noise_level)
+                    noise_level = random.choice(self.noise_levels)
+                    noisy_text = self.noise_generator.apply_noise(clean_text, noise_type, noise_level)
                     noisy_texts.append(noisy_text.split())
                 texts = noisy_texts
 
