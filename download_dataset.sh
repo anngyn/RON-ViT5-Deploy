@@ -11,6 +11,11 @@ DEFAULT_DRIVE_FILE_ID="1-LJyQ27HNmfCCuE1AAnwF2WYm84VlWPS"
 DEFAULT_DRIVE_FOLDER_URL="https://drive.google.com/drive/folders/1uw7v_tVAaszkDSvt5MdtpgWAImoy4Tq1?usp=drive_link"
 DEFAULT_DRIVE_FOLDER_ID="1uw7v_tVAaszkDSvt5MdtpgWAImoy4Tq1"
 
+ensure_dataset_root() {
+    mkdir -p data/ReceiptVQA-Dataset
+    mkdir -p data/ReceiptVQA-Dataset/features
+}
+
 normalize_folder_layout() {
     local base="$1"
 
@@ -28,26 +33,54 @@ download_from_drive() {
     local folder_id="${RECEIPTVQA_DRIVE_FOLDER_ID:-$DEFAULT_DRIVE_FOLDER_ID}"
     local output_zip="data/receiptvqa_drive.zip"
     local folder_tmp="data/receiptvqa_drive_folder"
+    local unpack_tmp="data/receiptvqa_drive_unpack"
 
     pip install -q gdown
 
+    ensure_dataset_root
+
     echo "Downloading ReceiptVQA zip from Google Drive..."
     rm -f "$output_zip"
-    if gdown --fuzzy "$drive_url" -O "$output_zip"; then
-        unzip -q "$output_zip" -d data
+    if gdown "$drive_url" -O "$output_zip"; then
+        rm -rf "$unpack_tmp"
+        mkdir -p "$unpack_tmp"
+        unzip -q "$output_zip" -d "$unpack_tmp"
         rm -f "$output_zip"
+
+        if [ -d "$unpack_tmp/ReceiptVQA-Dataset" ]; then
+            rm -rf data/ReceiptVQA-Dataset
+            mv "$unpack_tmp/ReceiptVQA-Dataset" data/
+        elif [ -d "$unpack_tmp/ReceiptVQA_annotations" ]; then
+            rm -rf data/ReceiptVQA-Dataset/ReceiptVQA_annotations
+            mv "$unpack_tmp/ReceiptVQA_annotations" data/ReceiptVQA-Dataset/
+        elif [ -d "$unpack_tmp/google_ocr" ]; then
+            rm -rf data/ReceiptVQA-Dataset/features/google_ocr
+            mkdir -p data/ReceiptVQA-Dataset/features
+            mv "$unpack_tmp/google_ocr" data/ReceiptVQA-Dataset/features/
+        fi
+
+        if [ -f "$unpack_tmp/ReceiptVQA_annotations.zip" ]; then
+            mv "$unpack_tmp/ReceiptVQA_annotations.zip" data/ReceiptVQA-Dataset/
+        fi
+
+        if [ -f "$unpack_tmp/google_ocr.zip" ]; then
+            mkdir -p data/ReceiptVQA-Dataset/features
+            mv "$unpack_tmp/google_ocr.zip" data/ReceiptVQA-Dataset/features/
+        fi
+
+        if [ -f "$unpack_tmp/features/google_ocr.zip" ]; then
+            mkdir -p data/ReceiptVQA-Dataset/features
+            mv "$unpack_tmp/features/google_ocr.zip" data/ReceiptVQA-Dataset/features/
+        fi
+
+        rm -rf "$unpack_tmp"
+    fi
+
+    if verify_dataset "data/ReceiptVQA-Dataset"; then
         return 0
     fi
 
-    echo "Primary Drive file URL failed. Retrying with file id..."
-    rm -f "$output_zip"
-    if gdown "$drive_id" -O "$output_zip"; then
-        unzip -q "$output_zip" -d data
-        rm -f "$output_zip"
-        return 0
-    fi
-
-    echo "Drive zip download failed. Trying shared folder..."
+    echo "Primary Drive file incomplete. Trying shared folder..."
     rm -rf "$folder_tmp"
     mkdir -p "$folder_tmp"
     if ! gdown --folder "$folder_url" -O "$folder_tmp"; then
@@ -62,20 +95,33 @@ download_from_drive() {
     if [ -n "$folder_zip" ]; then
         echo "Extracting dataset zip from shared folder..."
         unzip -q "$folder_zip" -d data
-        rm -rf "$folder_tmp"
-        return 0
     fi
 
     if [ -d "$folder_tmp/ReceiptVQA-Dataset" ]; then
         echo "Moving ReceiptVQA-Dataset from shared folder..."
         rm -rf data/ReceiptVQA-Dataset
         mv "$folder_tmp/ReceiptVQA-Dataset" data/
-        rm -rf "$folder_tmp"
-        return 0
+    else
+        if [ -d "$folder_tmp/ReceiptVQA_annotations" ]; then
+            rm -rf data/ReceiptVQA-Dataset/ReceiptVQA_annotations
+            mv "$folder_tmp/ReceiptVQA_annotations" data/ReceiptVQA-Dataset/
+        fi
+        if [ -f "$folder_tmp/ReceiptVQA_annotations.zip" ]; then
+            mv "$folder_tmp/ReceiptVQA_annotations.zip" data/ReceiptVQA-Dataset/
+        fi
+        if [ -d "$folder_tmp/google_ocr" ]; then
+            rm -rf data/ReceiptVQA-Dataset/features/google_ocr
+            mkdir -p data/ReceiptVQA-Dataset/features
+            mv "$folder_tmp/google_ocr" data/ReceiptVQA-Dataset/features/
+        fi
+        if [ -f "$folder_tmp/google_ocr.zip" ]; then
+            mkdir -p data/ReceiptVQA-Dataset/features
+            mv "$folder_tmp/google_ocr.zip" data/ReceiptVQA-Dataset/features/
+        fi
     fi
 
     rm -rf "$folder_tmp"
-    return 1
+    return 0
 }
 
 extract_nested_archives() {
