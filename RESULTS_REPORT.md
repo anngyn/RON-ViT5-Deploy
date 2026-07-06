@@ -176,7 +176,26 @@ Tất cả noise sinh bởi `OCRNoiseGenerator` (seed=42). Cường độ scale 
 
 Consistency đắt nhất (2 forward passes/step + batch nhỏ) nhưng kém hơn aug → chi phí không tương xứng lợi ích.
 
-## 11. Files
+## 11. Training Dynamics
+
+Dev ANLS theo từng epoch (dev-based checkpoint selection):
+
+| Epoch | Baseline | Consistency |
+|:-----:|:--------:|:-----------:|
+| 1 | 0.7842 | 0.7868 |
+| 2 | 0.8140 | 0.8110 |
+| 3 | **0.8291** | **0.8310** |
+
+Train loss (baseline): 0.6435 → 0.4084 → 0.3286.
+
+**Nhận xét:**
+- Cả 2 flows **converge đơn điệu**, dev ANLS tăng đều qua 3 epochs → chưa overfit, chọn epoch cuối là hợp lý.
+- Consistency đuổi kịp baseline ở dev (0.8310 vs 0.8291) nhưng **kém ở clean test** (0.8397 vs 0.8411) — cho thấy consistency generalize sang phân phối test hơi kém hơn dù dev ANLS nhỉnh.
+- Baseline chưa bão hoà loss ở epoch 3 (0.33) → có thể train thêm epoch, nhưng gain kỳ vọng nhỏ.
+
+*(noisy_aug per-epoch dev ANLS không được lưu trong log → không đưa vào biểu đồ để tránh số liệu bịa.)*
+
+## 12. Files
 
 ```
 outputs/results/
@@ -186,5 +205,7 @@ outputs/results/
 ├── flow{1,2,3}_*_anls.png              ANLS bar charts (từng flow)
 ├── flow{1,2,3}_*_drop.png              Drop-from-clean charts (từng flow)
 ├── combined_3flows_l2_anls.png         So sánh 3 flows (ANLS)
-└── combined_3flows_l2_drop.png         So sánh 3 flows (drop from clean)
+├── combined_3flows_l2_drop.png         So sánh 3 flows (drop from clean)
+├── training_curves_dev_anls.png        Dev ANLS per epoch
+└── training_curves_train_loss.png      Train loss per epoch
 ```
