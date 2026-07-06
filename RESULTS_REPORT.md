@@ -123,13 +123,68 @@ Cả 2 đều huấn luyện trên clean + noisy (nội dung data giống nhau).
 - Ưu tiên **Noisy Augmentation** với trọng tâm money + accent + deletion noise.
 - Bỏ consistency loss — chi phí (paired data, 3 loss terms) không đem lại lợi ích.
 
-## 7. Files
+## 7. Noise Taxonomy (14 loại)
+
+Tất cả noise sinh bởi `OCRNoiseGenerator` (seed=42). Cường độ scale theo level: L1=0.5×, L2=1.0×, L3=1.6×. Ví dụ dưới đây ở L2/L3 để minh hoạ rõ.
+
+| ID | Noise Type | Mô tả | Clean → Noisy (ví dụ) |
+|----|-----------|-------|------------------------|
+| N1 | accent_removal | Bỏ toàn bộ dấu tiếng Việt + đ→d | `Tổng cộng: 1.250.000đ` → `Tong cong: 1.250.000d` |
+| N2 | tone_confusion | Đổi dấu thanh (sắc/huyền/hỏi/ngã/nặng) | `Số HĐ ...` → `Sổ HĐ ...` |
+| N3 | vowel_diacritic_confusion | Nhầm dấu nguyên âm (a/ă/â, o/ô/ơ...) | `Tổng cộng` → `Tổng cơng` |
+| N4 | dd_confusion | đ/Đ → d/D | `Đặt hàng đơn giá` → `Dặt hàng đơn giá` |
+| N5 | character_confusion | Nhầm ký tự nhìn giống: 0↔O, 1↔l, 5↔S, 8↔B, 2↔Z | `HD00123` → `HD001Z3` |
+| N6 | glyph_confusion | Nhầm cụm glyph: rn↔m, cl↔d, vv↔w | `burn` → `bum` |
+| N7 | character_deletion | Xoá ngẫu nhiên ký tự (giữ khoảng trắng) | `1.250.000đ` → `1.250.00đ` |
+| N10 | token_deletion | Xoá/chèn token ngẫu nhiên | `Số HĐ: ABC...` → `HĐ: ABC...` |
+| N13 | line_shuffle | Xáo trộn thứ tự dòng/câu | `Mua hang. Thanh toan. Cam on` → `Cam on Thanh toan Mua hang` |
+| N14 | token_split | Tách 1 token dài thành 2 | `cộng:` → `cộ ng:` |
+| N16 | money_noise | Phá số tiền: bỏ dấu phân cách + nhầm ký tự số | `1.250.000đ` → `1 25O OOO d` |
+| N17 | date_noise | Phá ngày tháng (dd/mm/yyyy) | `15/03/2024` → `15/03/ZOZ4` |
+| N18 | code_noise | Phá mã (chuỗi A-Z0-9 ≥5): nhầm + xoá ký tự | `ABCDE12345` → `ABCD1Z35` |
+| N20 | mixed_noise | Kết hợp ngẫu nhiên nhiều loại trên | `Tổng cộng: 1.250.000đ` → `Tong cong: 1.250.000d ---` |
+
+## 8. Qualitative Analysis
+
+**Tại sao money_noise & mixed_noise hại nhất:**
+
+- **money_noise**: Answer của ReceiptVQA thường là số tiền. Khi `1.250.000đ` → `1 25O OOO d`, model đọc sai chữ số (`0`→`O`) và mất dấu phân cách. Answer số sai 1 ký tự → similarity tụt dưới ngưỡng ANLS 0.5 → tính là **sai hoàn toàn** (score 0). Đây là hiệu ứng "cliff": lỗi nhỏ ở answer quan trọng → mất trắng điểm.
+
+- **mixed_noise**: Chồng nhiều lỗi (bỏ dấu + nhầm ký tự + phá số + xoá token). Context bị nhiễu ở nhiều mặt cùng lúc → model khó bám tín hiệu → drop lớn nhất (−9.88).
+
+**Tại sao glyph/dd/date/tone gần như vô hại:**
+
+- Các lỗi này (i) hiếm khi rơi trúng answer, hoặc (ii) ViT5 đã học được biến thể chính tả tương tự trong pretraining tiếng Việt. `date_noise` chỉ hại nếu câu hỏi hỏi về ngày — phần lớn câu hỏi hỏi về tiền/tên hàng nên ít ảnh hưởng.
+
+**Cơ chế cứu của Noisy Aug:** Khi thấy `O`/`0`, `l`/`1` lẫn lộn trong lúc train, model học coi chúng tương đương → đọc đúng số tiền dù bị nhiễu. Đây là lý do aug cứu money noise nhiều nhất (+5.1).
+
+## 9. Limitations
+
+- **Một seed, một model.** Chưa chạy multi-seed để ước lượng phương sai; chênh lệch ANLS < 0.002 (glyph/dd/date) không đủ tin cậy để kết luận.
+- **Noise tổng hợp.** Nhiễu sinh bằng luật, không phải OCR error thực tế từ ảnh receipt. Phân phối lỗi thật có thể khác.
+- **Chỉ ViT5-base.** Chưa so sánh với model khác (mBART, layout-aware như LiGT) để biết finding có tổng quát không.
+- **Level cố định L2 khi so sánh chính.** Chưa quét L1/L3 đầy đủ để xác nhận severity scaling monotonic.
+- **Adapter/RON-NACA chưa chạy** — phạm vi báo cáo giới hạn ở clean vs augmentation vs consistency.
+
+## 10. Compute Cost
+
+| Flow | Method | Trainable params | Train time (epoch) | Ghi chú |
+|------|--------|:----------------:|:------------------:|---------|
+| 1 | Clean baseline | 225M | ~15 phút | full fine-tune |
+| 2 | Noisy Aug | 225M | ~30 phút | 2× data |
+| 3 | Consistency | 225M | ~90 phút | paired forward, batch=4 |
+
+Consistency đắt nhất (2 forward passes/step + batch nhỏ) nhưng kém hơn aug → chi phí không tương xứng lợi ích.
+
+## 11. Files
 
 ```
 outputs/results/
-├── flow1_vit_clean_noise_l2.csv      Baseline (14 noise types @ L2)
-├── flow2_vit_aug_noise_l2.csv        Noisy Aug
-├── flow3_consistency_noise_l2.csv    Consistency
-├── flow{1,2,3}_*_anls.png            ANLS bar charts
-└── flow{1,2,3}_*_drop.png            Drop-from-clean charts
+├── flow1_vit_clean_noise_l2.csv        Baseline (14 noise types @ L2)
+├── flow2_vit_aug_noise_l2.csv          Noisy Aug
+├── flow3_consistency_noise_l2.csv      Consistency
+├── flow{1,2,3}_*_anls.png              ANLS bar charts (từng flow)
+├── flow{1,2,3}_*_drop.png              Drop-from-clean charts (từng flow)
+├── combined_3flows_l2_anls.png         So sánh 3 flows (ANLS)
+└── combined_3flows_l2_drop.png         So sánh 3 flows (drop from clean)
 ```
