@@ -23,7 +23,17 @@ Phân tích tác động của nhiễu OCR lên ViT5 cho bài toán Vietnamese R
 | **Flow 2** | ViT5 + Noisy Aug | Clean + Noisy (2×) | CE |
 | **Flow 3** | ViT5 + Consistency | Paired clean/noisy | CE_clean + CE_noisy + 0.5·Consistency |
 
+### Phân bố answer (test set)
+
+![Answer distribution](outputs/results/fig_answer_distribution.png)
+
+- **~49% answer là số/số điện thoại**, ~45% là text, phần còn lại là money/date có đơn vị rõ ràng.
+- Nhiều số tiền không kèm "đ/VND" nên rơi vào nhóm number. Thực tế **gần một nửa answer chứa chữ số** → cực nhạy với `character_confusion` (0↔O, 1↔l, 5↔S) và `money_noise`.
+- Answer ngắn (đa số < 15 ký tự) → chỉ vài ký tự sai đã đủ kéo similarity xuống dưới ngưỡng ANLS 0.5. Đây là gốc rễ của "cliff effect".
+
 ## 2. Kết Quả Tổng Hợp (ANLS @ L2)
+
+![Method summary](outputs/results/fig_method_summary.png)
 
 | Condition | Noise Type | Flow1 Clean | Flow2 Aug | Flow3 Consist |
 |-----------|-----------|:-----------:|:---------:|:-------------:|
@@ -44,6 +54,8 @@ Phân tích tác động của nhiễu OCR lên ViT5 cho bài toán Vietnamese R
 | N4 | dd_confusion | 0.8413 | **0.8519** | 0.8397 |
 
 ## 3. Phân Tích Noise Impact
+
+![Noise drop ranking](outputs/results/fig_noise_drop_ranking.png)
 
 ### Ranking mức độ ảnh hưởng (drop from clean, baseline model)
 
@@ -72,6 +84,8 @@ Phân tích tác động của nhiễu OCR lên ViT5 cho bài toán Vietnamese R
 5. **Nhiễu nhẹ gần như vô hại (< −1.0):** glyph, dd, date, line_shuffle, code. ViT5 vốn đã bền với các nhiễu này. dd_confusion thậm chí +0.0002 (nhiễu ngẫu nhiên).
 
 ## 4. So Sánh 2 Phương Pháp
+
+![Recovery per noise type](outputs/results/fig_recovery.png)
 
 ### Recovery per noise type (method − baseline)
 
@@ -178,6 +192,8 @@ Consistency đắt nhất (2 forward passes/step + batch nhỏ) nhưng kém hơn
 
 ## 11. Training Dynamics
 
+![Dev ANLS per epoch](outputs/results/training_curves_dev_anls.png)
+
 Dev ANLS theo từng epoch (dev-based checkpoint selection):
 
 | Epoch | Baseline | Consistency |
@@ -207,5 +223,11 @@ outputs/results/
 ├── combined_3flows_l2_anls.png         So sánh 3 flows (ANLS)
 ├── combined_3flows_l2_drop.png         So sánh 3 flows (drop from clean)
 ├── training_curves_dev_anls.png        Dev ANLS per epoch
-└── training_curves_train_loss.png      Train loss per epoch
+├── training_curves_train_loss.png      Train loss per epoch
+├── fig_answer_distribution.png         Phân bố answer type + độ dài
+├── fig_noise_drop_ranking.png          Ranking noise impact
+├── fig_recovery.png                    Recovery 2 methods per noise
+└── fig_method_summary.png              Tổng kết clean vs noisy
 ```
+
+Sinh lại figures: `python scripts/plot_report_figures.py`
