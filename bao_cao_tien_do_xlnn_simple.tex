@@ -1,0 +1,426 @@
+\documentclass{beamer}
+
+\mode<presentation>{
+    \usetheme{Madrid}
+}
+
+\usepackage[utf8]{vietnam}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usepackage{xcolor}
+\usepackage{graphicx}
+
+\title[Báo cáo tiến độ XLNN]{Phân tích độ bền vững của mô hình hỏi đáp hóa đơn tiếng Việt trước lỗi OCR}
+\subtitle{Báo cáo tiến độ môn Chuyên đề Xử lý Ngôn ngữ Tự nhiên}
+\author{Nguyễn Văn An}
+\institute[UIT]{Trường Đại học Công nghệ Thông tin \\ Đại học Quốc gia TP.HCM}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}
+    \titlepage
+\end{frame}
+
+\section{Bài toán}
+
+\begin{frame}
+\frametitle{Bài toán nghiên cứu}
+
+\textbf{Bài toán:} hỏi đáp trên hóa đơn tiếng Việt dựa trên văn bản OCR.
+
+\vspace{0.2cm}
+
+\begin{block}{Dạng đầu vào và đầu ra}
+\begin{itemize}
+    \item Đầu vào: câu hỏi tiếng Việt và văn bản OCR của hóa đơn.
+    \item Đầu ra: câu trả lời ngắn như tổng tiền, ngày bán, tên cửa hàng, địa chỉ.
+    \item Mô hình: ViT5 theo dạng \texttt{question + context -> answer}.
+\end{itemize}
+\end{block}
+
+\vspace{0.2cm}
+
+\begin{alertblock}{Vấn đề}
+Khi OCR bị lỗi, câu trả lời có thể sai dù câu hỏi không đổi. Vì vậy, cần đo độ suy giảm trên OCR nhiễu và kiểm tra liệu huấn luyện với dữ liệu nhiễu có giúp mô hình bền vững hơn hay không.
+\end{alertblock}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Ví dụ lỗi OCR trên hóa đơn}
+
+\begin{columns}
+\begin{column}{0.48\textwidth}
+\textbf{OCR sạch}
+\begin{itemize}
+    \item Tổng cộng: 125.000đ
+    \item Ngày bán: 01/02/2024
+    \item Cửa hàng: VinCommerce
+\end{itemize}
+
+\vspace{0.2cm}
+\textbf{Câu hỏi}
+\begin{itemize}
+    \item Tổng số tiền là bao nhiêu?
+\end{itemize}
+\end{column}
+
+\begin{column}{0.48\textwidth}
+\textbf{OCR nhiễu}
+\begin{itemize}
+    \item Tong cong: 125 OOO d
+    \item Ngay ban: O1/O2/2O24
+    \item Cua hang: VinC0mmerce
+\end{itemize}
+
+\vspace{0.2cm}
+\textbf{Rủi ro}
+\begin{itemize}
+    \item Nhầm số và chữ.
+    \item Mất dấu tiếng Việt.
+    \item Sai định dạng tiền và ngày.
+\end{itemize}
+\end{column}
+\end{columns}
+
+\end{frame}
+
+\section{Mục tiêu}
+
+\begin{frame}
+\frametitle{Mục tiêu và câu hỏi nghiên cứu}
+
+\textbf{Mục tiêu chính}
+\begin{enumerate}
+    \item Xây dựng baseline ViT5 cho bài toán hỏi đáp hóa đơn tiếng Việt trên OCR sạch.
+    \item Tạo bộ OCR nhiễu có kiểm soát (14 loại) để đo mức suy giảm hiệu năng.
+    \item Huấn luyện và so sánh 2 hướng tăng độ bền: Noisy Augmentation và Consistency Regularization.
+\end{enumerate}
+
+\vspace{0.25cm}
+
+\textbf{Câu hỏi nghiên cứu}
+\begin{itemize}
+    \item ViT5 suy giảm bao nhiêu khi OCR text bị nhiễu, và loại lỗi nào ảnh hưởng mạnh nhất?
+    \item Noise augmentation có giúp tăng điểm trên OCR nhiễu mà vẫn giữ điểm clean không?
+    \item Ràng buộc biểu diễn (consistency loss) có mang lại robustness tốt hơn augmentation đơn giản không?
+\end{itemize}
+
+\end{frame}
+
+\section{Dữ liệu}
+
+\begin{frame}
+\frametitle{Dữ liệu ReceiptVQA}
+
+\begin{table}
+\centering
+\begin{tabular}{lrr}
+\toprule
+\textbf{Thành phần} & \textbf{Số lượng} & \textbf{Ghi chú} \\
+\midrule
+Ảnh hóa đơn/OCR & 9.500 & Google OCR features \\
+Train QA & 51.886 & split gốc \\
+Dev QA & 6.426 & split gốc \\
+Test QA & 6.500 & split gốc \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{0.2cm}
+
+\begin{block}{Trạng thái dữ liệu}
+\begin{itemize}
+    \item Dataset đã được tải và kiểm tra cấu trúc.
+    \item Đường dẫn triển khai: \texttt{RON-ViT5-Deploy/ReceiptVQA-Dataset}.
+    \item Có đủ 3 file CSV và 9.500 file OCR \texttt{.npy}.
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+\section{Phương pháp}
+
+\begin{frame}
+\frametitle{Pipeline thực nghiệm}
+
+\begin{center}
+\begin{tikzpicture}[node distance=1.2cm, every node/.style={font=\small}]
+\node[draw, rounded corners, fill=blue!12, minimum width=3.2cm] (data) {ReceiptVQA};
+\node[draw, rounded corners, fill=green!12, below of=data, minimum width=3.2cm] (clean) {OCR sạch};
+\node[draw, rounded corners, fill=orange!15, right of=clean, xshift=3.2cm, minimum width=3.4cm] (noise) {Sinh OCR nhiễu};
+\node[draw, rounded corners, fill=purple!12, below of=clean, yshift=-0.1cm, minimum width=3.6cm] (base) {Train ViT5 baseline};
+\node[draw, rounded corners, fill=red!12, below of=noise, yshift=-0.1cm, minimum width=3.8cm] (aug) {Train ViT5 + Noise Aug};
+\node[draw, rounded corners, fill=gray!15, below of=base, xshift=2.9cm, yshift=-0.1cm, minimum width=4.8cm] (eval) {Đánh giá clean/noisy ANLS};
+
+\draw[->] (data) -- (clean);
+\draw[->] (clean) -- (noise);
+\draw[->] (clean) -- (base);
+\draw[->] (noise) -- (aug);
+\draw[->] (base) -- (eval);
+\draw[->] (aug) -- (eval);
+\end{tikzpicture}
+\end{center}
+
+\vspace{0.2cm}
+
+\textbf{Phạm vi hiện tại:} đã hoàn thành 3 nhánh: ViT5 baseline, ViT5 + Noise Aug, và ViT5 + Consistency Regularization (paired clean/noisy).
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Bộ 14 loại nhiễu OCR (mở rộng từ 6 loại ban đầu)}
+
+\begin{table}
+\small
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Loại nhiễu} & \textbf{Ví dụ} & \textbf{Nhóm} \\
+\midrule
+accent\_removal & Tổng cộng $\rightarrow$ Tong cong & chính tả \\
+character\_confusion & 0/O, 1/l, 5/S, 8/B & chính tả \\
+tone/vowel/dd\_confusion & dấu thanh, nguyên âm, đ/d & chính tả \\
+character/token\_deletion & xóa ký tự/token ngẫu nhiên & mất thông tin \\
+money\_noise & 125.000đ $\rightarrow$ 125 OOO d & trường quan trọng \\
+date/code\_noise & 01/02 $\rightarrow$ O1/O2 & trường quan trọng \\
+line\_shuffle, token\_split & xáo trộn / tách token & cấu trúc \\
+mixed\_noise & kết hợp ngẫu nhiên nhiều loại & tổng hợp \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{0.2cm}
+
+\begin{block}{Cách huấn luyện Noise Aug}
+Với \texttt{augmentation\_ratio = 1.0}, dữ liệu train được mở rộng thành hai phần: mẫu sạch và một mẫu OCR nhiễu tương ứng. Tổng số mẫu train xấp xỉ gấp đôi baseline. Consistency dùng cùng bộ nhiễu nhưng ở dạng \textit{cặp} clean/noisy.
+\end{block}
+
+\end{frame}
+
+\section{Thiết lập}
+
+\begin{frame}
+\frametitle{Thiết lập thực nghiệm hiện tại}
+
+\begin{table}
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Hạng mục} & \textbf{Cấu hình} \\
+\midrule
+Model & \texttt{VietAI/vit5-base} \\
+Input & \texttt{question: ... context: ...} \\
+Output & câu trả lời ngắn \\
+Metric chính & ANLS (threshold 0.5) \\
+Batch size & 8 (baseline/aug), 4 (consistency — paired forward) \\
+Learning rate & $5 \times 10^{-5}$ \\
+Epoch & 3 (chọn checkpoint theo dev ANLS) \\
+Max input length & 256 \\
+Max output length & 64 \\
+Generation & beam search $k=4$ \\
+Subset & 100\% dữ liệu (full) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{0.2cm}
+\textbf{GPU:} thuê GPU rời qua Vast.ai (CUDA, PyTorch 2.x); baseline/aug $\sim$15--30 phút/epoch, consistency $\sim$90 phút/epoch (2 forward passes/step, batch nhỏ hơn).
+
+\end{frame}
+
+\section{Tiến độ}
+
+\begin{frame}
+\frametitle{Tiến độ thực hiện}
+
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\textbf{Đã hoàn thành}
+\begin{itemize}
+    \item[\checkmark] Xác định bài toán và phạm vi NLP.
+    \item[\checkmark] Chuẩn bị ReceiptVQA và OCR features (full dataset).
+    \item[\checkmark] Cài đặt loader dữ liệu.
+    \item[\checkmark] Mở rộng bộ nhiễu từ 6 lên \textbf{14 loại} có kiểm soát.
+    \item[\checkmark] Huấn luyện đủ \textbf{3 phương pháp} trên full data.
+    \item[\checkmark] Đánh giá clean + 14 noisy test, phân tích chi tiết.
+\end{itemize}
+\end{column}
+
+\begin{column}{0.5\textwidth}
+\textbf{Kết quả đã có}
+\begin{itemize}
+    \item[\checkmark] Flow 1: ViT5 baseline (clean only).
+    \item[\checkmark] Flow 2: ViT5 + Noisy Augmentation.
+    \item[\checkmark] Flow 3: ViT5 + Consistency Regularization.
+    \item[\checkmark] Ranking mức ảnh hưởng của 14 loại nhiễu.
+    \item[\checkmark] So sánh recovery của 2 phương pháp theo từng loại nhiễu.
+\end{itemize}
+\end{column}
+\end{columns}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Kế hoạch tiếp theo}
+
+\begin{enumerate}
+    \item Quét severity theo level (L1/L2/L3) để kiểm tra tính đơn điệu của suy giảm.
+    \item Multi-seed để ước lượng phương sai cho các mức chênh lệch nhỏ ($<0.002$ ANLS).
+    \item Cân nhắc chạy thêm Adapter / RON-NACA nếu còn tài nguyên GPU.
+    \item Hoàn thiện báo cáo cuối kỳ với phân tích định tính (ví dụ input/output cụ thể).
+\end{enumerate}
+
+\vspace{0.25cm}
+
+\begin{alertblock}{Rủi ro và kiểm soát}
+Synthetic noise chưa phản ánh đầy đủ OCR thật; chỉ thử nghiệm trên một seed và một model (ViT5-base). Báo cáo mô tả rõ loại nhiễu, mức nhiễu, seed và giới hạn phạm vi kết luận.
+\end{alertblock}
+
+\end{frame}
+
+\section{Kết quả thực nghiệm}
+
+\begin{frame}
+\frametitle{Kết quả chính trên ReceiptVQA (full data, 14 loại nhiễu @ L2)}
+
+\begin{table}
+\small
+\centering
+\begin{tabular}{lccc}
+\toprule
+\textbf{Phương pháp} & \textbf{Clean} & \textbf{Avg Noisy (14)} & \textbf{Drop} \\
+\midrule
+ViT5 baseline & 84.11 & 82.06 & 2.05 \\
+ViT5 + Noisy Aug & \textbf{85.34} & \textbf{84.23} & \textbf{1.11} \\
+ViT5 + Consistency & 83.97 & 82.92 & 1.05 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{0.3cm}
+
+\textbf{Nhận xét}
+\begin{itemize}
+    \item Noisy Aug thắng ở cả clean (+1.23) và avg noisy (+2.17) so với baseline.
+    \item Consistency cải thiện drop tương đương Noisy Aug, nhưng \textbf{clean ANLS thấp hơn cả baseline} $\Rightarrow$ dấu hiệu over-regularization.
+    \item Noisy Aug là phương pháp hiệu quả nhất trong 3 phương pháp đã thử.
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Ranking mức ảnh hưởng của 14 loại nhiễu}
+
+\begin{center}
+\includegraphics[width=0.85\textwidth]{outputs/results/fig_noise_drop_ranking.png}
+\end{center}
+
+\vspace{0.1cm}
+\footnotesize{\textbf{mixed\_noise} (−9.88) và \textbf{money\_noise} (−4.99) gây suy giảm mạnh nhất; các nhiễu chính tả nhẹ (glyph, dd, date, tone) gần như vô hại ($<-1.0$).}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Vì sao money noise nguy hiểm?}
+
+\begin{center}
+\includegraphics[width=0.85\textwidth]{outputs/results/fig_answer_distribution.png}
+\end{center}
+
+\vspace{0.1cm}
+\footnotesize{$\sim$49\% câu trả lời trong test set là số/số điện thoại, đa số ngắn ($<15$ ký tự). Answer là số $\Rightarrow$ chỉ 1 ký tự sai (0$\leftrightarrow$O) đã kéo ANLS dưới ngưỡng 0.5 $\Rightarrow$ tính là sai hoàn toàn (hiệu ứng ``cliff'').}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{So sánh khả năng phục hồi: Noisy Aug vs Consistency}
+
+\begin{center}
+\includegraphics[width=0.85\textwidth]{outputs/results/fig_recovery.png}
+\end{center}
+
+\vspace{0.1cm}
+\footnotesize{Noisy Aug (cam) vượt Consistency (xanh) trên \textbf{toàn bộ 14 loại nhiễu}. Consistency thậm chí âm ở vài nhiễu nhẹ (glyph, tone, dd, line\_shuffle).}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Vì sao Consistency không vượt được Noisy Aug?}
+
+\begin{block}{Cả 2 đều thấy clean + noisy khi train — khác ở cách dùng}
+\begin{itemize}
+    \item \textbf{Noisy Aug:} clean/noisy là mẫu độc lập, chỉ tối ưu CE $\Rightarrow$ model tự do khớp dữ liệu.
+    \item \textbf{Consistency:} thêm ràng buộc $h_{clean} \approx h_{noisy}$ (cosine trên vector mean-pool) $\Rightarrow$ over-regularization.
+\end{itemize}
+\end{block}
+
+\vspace{0.2cm}
+
+\textbf{Bằng chứng:} Consistency có clean ANLS (83.97) \textit{thấp hơn} baseline (84.11) — ràng buộc làm giảm cả hiệu năng trên dữ liệu sạch, không chỉ trên nhiễu.
+
+\vspace{0.2cm}
+\textbf{Kết luận:} với bài toán này, augmentation đơn giản hiệu quả hơn ràng buộc biểu diễn phức tạp.
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Hướng mở rộng (nếu còn tài nguyên GPU)}
+
+\begin{table}
+\small
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{TN} & \textbf{Phương pháp} & \textbf{Mục tiêu kiểm tra} \\
+\midrule
+4 & Adapter Only & Giảm số tham số huấn luyện, giữ nền ViT5 cố định \\
+5 & RON-NACA & Kết hợp adapter và consistency loss \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{0.2cm}
+
+\begin{itemize}
+    \item \textbf{Adapter Only:} thêm bottleneck adapter (768$\to$64$\to$768, $\sim$100K tham số) vào encoder, freeze ViT5 base.
+    \item \textbf{RON-NACA:} adapter học thích nghi với noise, consistency loss giữ biểu diễn bền vững — mục tiêu là hiệu quả tài nguyên, không kỳ vọng vượt Noisy Aug.
+\end{itemize}
+
+\vspace{0.15cm}
+\textbf{Trạng thái:} chưa chạy; ưu tiên thấp vì Consistency (thành phần của RON-NACA) đã cho kết quả kém hơn Noisy Aug.
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Đóng góp}
+
+\begin{enumerate}
+    \item Pipeline thực nghiệm đầy đủ cho hỏi đáp hóa đơn tiếng Việt với ViT5 (3 phương pháp, full data).
+    \item Bộ 14 loại nhiễu OCR có kiểm soát cho ReceiptVQA, kèm ranking mức ảnh hưởng.
+    \item So sánh Noisy Augmentation vs Consistency Regularization — chỉ ra augmentation đơn giản thắng ràng buộc biểu diễn phức tạp trên bài toán này.
+    \item Phân tích định lượng: answer dạng số ($\sim$49\%) là nguyên nhân khiến money/mixed noise gây ``cliff effect'' trên ANLS.
+\end{enumerate}
+
+\vspace{0.3cm}
+
+\begin{block}{Thông điệp chính}
+Đề tài không đề xuất một kiến trúc mới lớn, mà tập trung vào đánh giá độ bền vững và kiểm tra hiệu quả của OCR noise augmentation trong bài toán hỏi đáp hóa đơn tiếng Việt.
+\end{block}
+
+\end{frame}
+
+\begin{frame}
+\begin{center}
+\Huge{Cảm ơn!}
+
+\vspace{1cm}
+
+\Large{Câu hỏi và thảo luận}
+\end{center}
+\end{frame}
+
+\end{document}
