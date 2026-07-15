@@ -83,6 +83,26 @@ Phân tích tác động của nhiễu OCR lên ViT5 cho bài toán Vietnamese R
 
 5. **Nhiễu nhẹ gần như vô hại (< −1.0):** glyph, dd, date, line_shuffle, code. ViT5 vốn đã bền với các nhiễu này. dd_confusion thậm chí +0.0002 (nhiễu ngẫu nhiên).
 
+### 3.1 Tại sao money_noise hại 27× hơn date_noise (cùng probability param 0.30)?
+
+`money_noise` và `date_noise` được cấu hình cùng xác suất áp dụng (0.30 tại L2 trong `noise.py`), nhưng drop chênh nhau **27×** (−4.99 vs −0.19). Giả thuyết: probability tham số không quyết định impact — mà là **tỷ lệ answer thực sự chứa loại thông tin đó**.
+
+Đo trực tiếp trên test set (6,500 answers):
+
+| Field type | % answer khớp pattern | Drop tương ứng | Drop / % exposure |
+|-----------|:---------------------:|:--------------:|:------------------:|
+| money/number | 48.75% | −4.99 | 0.102 |
+| date | 5.22% | −0.19 | 0.036 |
+| accent (toàn văn) | 100% | −3.15 | 0.032 |
+| character (toàn văn, weighted) | 73.83% (answer có digit) | −1.70 | 0.023 |
+
+**Kết luận:**
+- Exposure (tỷ lệ answer chứa field bị nhiễu) giải thích phần lớn khoảng cách 27×: money chạm ~49% answer, date chỉ ~5% — chênh lệch **~9.3×** về exposure.
+- Nhưng ngay cả sau khi chuẩn hoá theo exposure, **money vẫn hại hơn date** (0.102 vs 0.036 — còn chênh ~2.8×). Lý do: money field vừa mất separator (`.`/`,`) vừa đổi ký tự số cùng lúc, và answer dạng số **không có "gần đúng"** — sai 1 chữ số là sai giá trị hoàn toàn, trong khi date sai 1 ký tự (ví dụ `2024`→`2O24`) đôi khi vẫn giữ được đủ ngữ cảnh để human-readable dù máy đọc sai.
+- Correlation thô giữa noise-probability-parameter và drop trên toàn bộ 13 loại (không tính mixed) chỉ **r=0.36** — xác nhận probability param KHÔNG phải yếu tố dự đoán chính; exposure (tần suất answer chạm field) mới là yếu tố chi phối.
+
+*(Exposure đo trên answer text bằng regex, dùng như proxy — không đo trực tiếp trên OCR context vì không có ground-truth span annotation.)*
+
 ## 4. So Sánh 2 Phương Pháp
 
 ![Recovery per noise type](outputs/results/fig_recovery.png)
