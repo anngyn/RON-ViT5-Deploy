@@ -69,7 +69,7 @@ Phân tích tác động của nhiễu OCR lên ViT5 cho bài toán Vietnamese R
 | 6 | character_confusion | −1.70 | 🟡 Nhẹ |
 | 7 | token_split | −1.40 | 🟡 Nhẹ |
 | 8 | tone_confusion | −1.02 | 🟡 Nhẹ |
-| 9–14 | vowel/code/line/date/glyph/dd | < −1.0 | 🟢 Không đáng kể |
+| 9–14 | vowel/code/line/date/glyph/dd | < −1.0 | ⚪ Dưới ngưỡng tin cậy |
 
 ### Nhận xét chính
 
@@ -81,7 +81,9 @@ Phân tích tác động của nhiễu OCR lên ViT5 cho bài toán Vietnamese R
 
 4. **Accent removal (−3.15)** đáng chú ý — đặc thù tiếng Việt, bỏ dấu làm đổi nghĩa từ.
 
-5. **Nhiễu nhẹ gần như vô hại (< −1.0):** glyph, dd, date, line_shuffle, code. ViT5 vốn đã bền với các nhiễu này. dd_confusion thậm chí +0.0002 (nhiễu ngẫu nhiên).
+5. **6/14 điều kiện nằm dưới ngưỡng tin cậy — lưới nhiễu hữu hiệu chỉ ~7 chiều.** vowel, code, line_shuffle, date, glyph, dd đều có |effect| < 0.6 điểm **và đổi dấu giữa các model** (dd: −0.02 ở baseline nhưng +0.002 ở consistency). Ở một seed, chúng không phân biệt được với zero. Hệ quả: mọi so sánh trên 6 điều kiện này đều không kết luận được, và ngân sách augmentation rải lên chúng là lãng phí.
+
+![Effect size vs ngưỡng tin cậy](outputs/results/fig_noise_floor.png)
 
 ### 3.1 Tại sao money_noise hại 27× hơn date_noise (cùng probability param 0.30)?
 
@@ -107,55 +109,135 @@ Phân tích tác động của nhiễu OCR lên ViT5 cho bài toán Vietnamese R
 
 ![Recovery per noise type](outputs/results/fig_recovery.png)
 
-### Recovery per noise type (method − baseline)
+So sánh trực tiếp bằng `drop_from_clean` bị **confound**: mỗi model đo drop so với trần clean của **chính nó**, nên cột thấp hơn không đồng nghĩa robust hơn. Mục này tách hiệu ứng thành hai thành phần để khử confound.
 
-| Noise Type | Baseline | Aug Gain | Consist Gain |
-|-----------|:--------:|:--------:|:------------:|
-| mixed_noise | 0.742 | **+6.4** | +4.9 |
-| money_noise | 0.791 | **+5.1** | +3.5 |
-| accent_removal | 0.810 | **+2.5** | +1.5 |
-| character_confusion | 0.824 | **+2.4** | +1.3 |
-| token_deletion | 0.819 | **+1.8** | +0.3 |
-| line_shuffle | 0.836 | **+1.3** | −0.1 |
-| glyph_confusion | 0.840 | **+1.2** | −0.1 |
-| dd_confusion | 0.841 | **+1.1** | −0.2 |
+### 4.1 Phân rã hiệu ứng
 
-### Kết luận so sánh
+Gọi $A_m(n)$ là ANLS của model $m$ trên điều kiện $n$; $n_0$ là clean; $B$ là baseline.
 
-- **Noisy Aug thắng ở MỌI noise type.** aug_gain > consist_gain trên toàn bộ 14 loại.
-- **Recovery tỉ lệ với severity:** noise càng hại, method càng cứu nhiều. Money & mixed được cứu nhiều nhất.
-- **Consistency yếu ở noise nhẹ:** một số gain âm (glyph, line, dd, tone) → constraint làm giảm nhẹ hiệu năng.
+| Đại lượng | Công thức | Ý nghĩa |
+|---|---|---|
+| $L_m$ | $A_m(n_0) - A_B(n_0)$ | **Nâng nền chung** — dịch chuyển năng lực tổng quát hóa, không phụ thuộc nhiễu |
+| $\Delta_m(n)$ | $A_m(n) - A_B(n)$ | Lợi ích tuyệt đối so baseline |
+| $R_m(n)$ | $\Delta_m(n) - L_m = \text{drop}_B(n) - \text{drop}_m(n)$ | **Khử nhiễu riêng** — phần chỉ thuộc loại nhiễu đó |
+| $\rho_m(n)$ | $1 - \text{drop}_m(n)/\text{drop}_B(n)$ | Hệ số khả quy — tỷ lệ thiệt hại được sửa |
+| $\eta_m(n)$ | $A_m(n)/A_m(n_0)$ | Retention — robust tương đối, chuẩn hóa theo trần riêng |
 
-## 5. Tại Sao Consistency Kém Hơn Noisy Aug?
+Giả định mô hình hóa: **additive separability**, $\Delta_m(n) \approx L_m + R_m(n)$.
+Đo được **$L_{aug} = +1.23$**, **$L_{cons} = -0.14$** điểm → chênh nền $\Delta L = 1.37$.
 
-Cả 2 đều huấn luyện trên clean + noisy (nội dung data giống nhau). Khác biệt nằm ở cách dùng:
+### 4.2 Khử nhiễu riêng của hai phương pháp gần bằng nhau
+
+![Recovery equivalence](outputs/results/fig_recovery_equivalence.png)
+![Lift decomposition](outputs/results/fig_lift_decomposition.png)
+
+| Noise | $\Delta_{aug}$ | $\Delta_{cons}$ | $R_{aug}$ | $R_{cons}$ |
+|---|:---:|:---:|:---:|:---:|
+| mixed | +6.39 | +4.89 | 5.16 | 5.02 |
+| money | +5.10 | +3.52 | 3.87 | 3.65 |
+| accent | +2.52 | +1.53 | 1.29 | **1.66** |
+| char_conf | +2.39 | +1.29 | 1.16 | **1.42** |
+| token_del | +1.78 | +0.35 | 0.54 | 0.48 |
+| char_del | +1.53 | +0.21 | 0.29 | **0.34** |
+| token_split | +1.71 | +0.20 | 0.47 | 0.33 |
+| **Trung bình (7 điều kiện có tín hiệu)** | | | **1.82** | **1.84** |
+
+Cột $\Delta$ tái hiện kết luận cũ "Aug thắng ở mọi loại". Nhưng sau khi trừ nền, **$R$ của hai phương pháp nằm sát đường chéo** — trung bình 1.82 vs 1.84, và trên accent / char_conf / char_del thì Consistency còn khử **mạnh hơn**.
+
+**Kết luận:** ưu thế tổng hợp của Aug quy gần như hoàn toàn về $\Delta L = 1.37$ — tức phần *regularization tổng quát*, **không phải** phần *chống nhiễu*. Kiểm tra nội tại: ở các nhiễu vô hại (glyph, dd), $\Delta_{aug} \approx L_{aug}$ và $R \approx 0$, nhất quán với giả định nền truyền đều.
+
+### 4.3 Nhiễu xóa là bất khả quy
+
+![Reducibility](outputs/results/fig_reducibility.png)
+
+| Noise | drop baseline | drop sau Aug | $\rho_{aug}$ |
+|---|:---:|:---:|:---:|
+| money | 4.99 | 1.13 | **0.77** |
+| char_conf | 1.70 | 0.55 | 0.68 |
+| accent | 3.15 | 1.86 | 0.41 |
+| token_del | 2.26 | 1.71 | **0.24** |
+| char_del | 2.07 | 1.78 | **0.14** |
+
+Nhiễu thay thế **reducible** — tồn tại ánh xạ chuẩn hóa xác định (`O`↔`0`) để học. Nhiễu xóa **irreducible** — bằng chứng bị loại khỏi đầu vào nên không objective augmentation nào phục hồi được.
+
+Đây là tinh chỉnh cho nhận xét 3 ở mục 3: deletion không chỉ *hại hơn* confusion, mà còn **không chữa được**. Sau robust hóa, vulnerability trội **chuyển từ money sang deletion**.
+
+### 4.4 Kiểm định chéo bằng retention
+
+![Retention](outputs/results/fig_retention.png)
+
+Chuẩn hóa theo trần riêng loại bỏ ảnh hưởng của $L_m$. Trên money: $\eta_{cons} = 0.984 \approx \eta_{aug} = 0.987 \gg \eta_B = 0.941$ — hai phương pháp hội tụ, xác nhận độc lập cho 4.2.
+
+## 5. Vì Sao Consistency Mất Nền Clean?
+
+Mục 4.2 định vị lại điểm yếu: Consistency **không** kém ở khử nhiễu, mà mất nền clean.
 
 | | Noisy Aug | Consistency |
 |---|-----------|-------------|
 | Dataset | 103,772 samples (shuffle) | 51,886 pairs |
 | Loss | CE | CE_clean + CE_noisy + 0.5·(1−cos) |
-| Clean ANLS | **0.8534** | 0.8397 (−1.4) |
+| Clean ANLS | **0.8534** | 0.8397 |
+| $L_m$ (nâng nền) | **+1.23** | **−0.14** |
+| $\bar R$ (khử nhiễu riêng) | 1.82 | **1.84** |
 
-**Nguyên nhân:**
+Hai phương pháp khử nhiễu ngang nhau; toàn bộ khoảng cách nằm ở cột $L_m$.
 
-1. **Over-regularization.** Consistency ép `h_clean ≈ h_noisy` — ràng buộc thêm làm hạn chế capacity. Đôi khi noisy input NÊN encode khác để decoder biết mà xử lý.
+**Cơ chế (giả thuyết):** loss `1 − cos` chỉ tối ưu *alignment* mà **không có số hạng đẩy** (*uniformity*). Nghiệm tầm thường của nó là ánh xạ mọi biểu diễn về cùng một vùng không gian — **representation collapse** — làm mất phương sai biểu diễn mà hiệu năng trên phân phối sạch phụ thuộc vào (khung alignment–uniformity, Wang & Isola, ICML 2020).
 
-2. **Tín hiệu thô.** Mean-pool nén 256 tokens → 1 vector 768-chiều, mất thông tin token-level. Cosine trên vector nén là tín hiệu coarse, không dạy model xử lý noise ở token cụ thể.
+Bottleneck mean-pool (256 token → 1 vector 768 chiều) làm tín hiệu thêm thô, nhưng riêng nó **không** giải thích được việc *mất* điểm clean; thiếu số hạng đẩy mới là nguyên nhân đủ.
 
-3. **Bằng chứng:** Consistency clean ANLS thấp hơn baseline (0.8397 < 0.8411) — constraint làm giảm cả performance trên data sạch, dấu hiệu rõ của over-regularization.
+**Hệ quả:** đây là vấn đề của **dạng hàm mục tiêu**, không phải của ý tưởng consistency. Thay bằng InfoNCE (thêm negative trong batch) hoặc symmetric-KL trên phân phối decoder (R-Drop) thì collapse trở thành nghiệm có loss cao, về nguyên tắc giữ được nền clean. Thiết kế và giao thức đánh giá đề xuất: `CONSISTENCY_V2_DESIGN.md` (**chưa tích hợp vào code** — bản hiện tại vẫn dùng cosine).
 
-**Bài học:** Với task này, augmentation đơn giản + CE beat consistency regularization phức tạp.
+## 6. Kết Luận Và Đề Xuất Cải Tiến
 
-## 6. Kết Luận
+1. **Không phải noise nào cũng hại** — chỉ 7/14 điều kiện mang tín hiệu, trong đó 3 loại nghiêm trọng (mixed, money, accent).
+2. **Money noise critical** cho ReceiptVQA — exposure ~49% answer chứa chữ số.
+3. **Noisy Augmentation là lựa chọn tốt nhất hiện tại**, nhưng lợi thế của nó chủ yếu đến từ hiệu ứng regularization tổng quát ($L = +1.23$), **không phải** từ khả năng chống nhiễu vượt trội.
+4. **Consistency là phương pháp robust hợp lệ** ($\bar R$ 1.84 vs 1.82 của Aug); dạng loss hiện tại mới là thứ làm mất nền clean — một vấn đề *hàm mục tiêu* có thể sửa.
+5. **Nhiễu xóa là ranh giới cứng** — không augmentation nào vượt được $\rho \approx 0.2$.
 
-1. **Không phải noise nào cũng hại** — chỉ 2–3 loại thực sự nghiêm trọng (mixed, money, accent).
-2. **Money noise critical** cho ReceiptVQA (answer là số tiền).
-3. **Noisy Augmentation = giải pháp tốt nhất** — đơn giản, hiệu quả, cải thiện cả clean lẫn noisy.
-4. **Consistency regularization không vượt được** simple augmentation, thậm chí giảm nhẹ ở nhiễu nhẹ.
+Các đề xuất dưới đây xếp theo tỷ lệ lợi ích/chi phí, mỗi mục neo vào một quan sát cụ thể ở trên.
 
-### Đề xuất triển khai
-- Ưu tiên **Noisy Augmentation** với trọng tâm money + accent + deletion noise.
-- Bỏ consistency loss — chi phí (paired data, 3 loss terms) không đem lại lợi ích.
+### 6.1 Sửa dạng consistency loss (ưu tiên cao nhất)
+
+Từ mục 5: điểm yếu duy nhất là mất nền clean do collapse. Hai biến thể thay thế, chi phí chỉ là đổi một hàm loss — **InfoNCE** (thêm negative) và **symmetric-KL / R-Drop** (align phân phối decoder, bỏ qua bottleneck mean-pool). Đề xuất bổ sung tham số `consistency_type ∈ {cosine, contrastive, kl}`; thiết kế chi tiết trong `CONSISTENCY_V2_DESIGN.md` (**chưa tích hợp vào code**).
+
+**Phép kiểm quyết định:** clean ANLS của biến thể mới ≥ 0.8411 trong khi cosine vẫn ~0.8397.
+
+### 6.2 Phân bổ lại ngân sách augmentation
+
+`random.choice` hiện rải **đều 1/14**, trong khi mục 3 cho thấy 6 loại nằm dưới ngưỡng tin cậy và thiệt hại tập trung ở 3 loại. Đề xuất lấy mẫu theo trọng số tỷ lệ với drop đo được. Chi phí bằng 0.
+
+### 6.3 Bổ sung nhầm lẫn chữ số ↔ chữ số
+
+`char_map` hiện **toàn bộ là digit↔letter** (`0↔O`, `5↔S`), không có cặp digit↔digit (`3↔8`, `6↔8`, `1↔7`) — trong khi ~49% answer chứa chữ số và mục 4.3 cho thấy nhiễu thay thế là loại **khử được tốt nhất** ($\rho$ 0.68–0.77). Đây là lỗ hổng bao phủ lớn nhất của bộ sinh nhiễu.
+
+### 6.4 Augmentation neo theo answer
+
+Nhiễu hiện **mù answer**: rải đều lên context, chỉ *tình cờ* trúng vùng quyết định — mâu thuẫn với kết luận exposure ở mục 3.1. Đề xuất định vị chuỗi answer rồi chủ động áp nhiễu lên chính vùng đó, biến việc học bất biến thành curriculum có giám sát.
+
+*Điều kiện tiên quyết:* đo tỷ lệ answer là extractive (cột `eligible` trong `scripts/analyze_noise_distribution.py`); nếu phần lớn abstractive thì không định vị được.
+
+### 6.5 Consistency dư thừa cho nhiễu xóa
+
+Mục 4.3 cho thấy augmentation bất lực với deletion. Về lý thuyết thông tin, cách duy nhất phục hồi thông tin đã mất là **dư thừa** — hóa đơn lặp giá trị (tổng tiền ở subtotal/tổng cộng/thành tiền). Đề xuất: xóa một bản sao, thêm loss buộc model trả lời đúng nhờ bản còn lại.
+
+*Điều kiện tiên quyết:* đo tần suất answer xuất hiện >1 lần trong context.
+
+### 6.6 Phân phối nhiễu thích ứng theo lỗi
+
+Tương quan giữa tham số xác suất thiết kế và thiệt hại thực tế chỉ **r = 0.36** (mục 3.1), nên gán trọng số bằng tay cũng chỉ là đoán tốt hơn. Đề xuất: sau mỗi epoch, tìm cặp (mẫu, loại nhiễu) bị sai và oversample, để chính lỗi của model định nghĩa phân phối.
+
+### 6.7 Ưu tiên thực thi
+
+| Đề xuất | Lợi ích kỳ vọng | Chi phí | Rủi ro giả định |
+|---|---|---|---|
+| 6.1 contrastive/KL | Cao — sửa đúng điểm yếu đo được | Thấp | Thấp |
+| 6.2 trọng số nhiễu | Trung bình–cao | ~0 | Thấp |
+| 6.3 digit↔digit | Trung bình–cao | Thấp | Thấp |
+| 6.4 neo answer | Cao | Trung bình | Cần answer extractive |
+| 6.5 dư thừa | Cao cho deletion | Cao | Cần đo dư thừa |
+| 6.6 thích ứng | Trung bình | Trung bình | Thấp |
 
 ## 7. Noise Taxonomy (14 loại)
 
@@ -194,7 +276,9 @@ Tất cả noise sinh bởi `OCRNoiseGenerator` (seed=42). Cường độ scale 
 
 ## 9. Limitations
 
-- **Một seed, một model.** Chưa chạy multi-seed để ước lượng phương sai; chênh lệch ANLS < 0.002 (glyph/dd/date) không đủ tin cậy để kết luận.
+- **Một seed, một model.** Chưa chạy multi-seed để ước lượng phương sai. Theo mục 3, 6/14 điều kiện nằm dưới ngưỡng tin cậy và đổi dấu giữa các model. Các phát hiện ở mục 4 có effect size 1–5 điểm nên đủ tin, nhưng trước khi công bố cần **multi-seed / paired bootstrap** để có khoảng tin cậy.
+- **Chưa kiểm định tính cộng dồn của `mixed_noise`.** Nó dùng xác suất nội bộ thấp hơn các điều kiện đứng riêng, nên so trực tiếp drop của mixed với tổng drop thành phần sẽ sai. Cần thí nghiệm khớp xác suất.
+- **Giả định additive separability** ($\Delta = L + R$ ở mục 4.1) chưa được kiểm định hình thức; mới chỉ có bằng chứng nhất quán ở các điều kiện $R \approx 0$.
 - **Noise tổng hợp.** Nhiễu sinh bằng luật, không phải OCR error thực tế từ ảnh receipt. Phân phối lỗi thật có thể khác.
 - **Chỉ ViT5-base.** Chưa so sánh với model khác (mBART, layout-aware như LiGT) để biết finding có tổng quát không.
 - **Level cố định L2 khi so sánh chính.** Chưa quét L1/L3 đầy đủ để xác nhận severity scaling monotonic.
@@ -208,7 +292,7 @@ Tất cả noise sinh bởi `OCRNoiseGenerator` (seed=42). Cường độ scale 
 | 2 | Noisy Aug | 225M | ~30 phút | 2× data |
 | 3 | Consistency | 225M | ~90 phút | paired forward, batch=4 |
 
-Consistency đắt nhất (2 forward passes/step + batch nhỏ) nhưng kém hơn aug → chi phí không tương xứng lợi ích.
+Consistency đắt nhất (2 forward passes/step + batch nhỏ). Với dạng loss hiện tại, chi phí này không tương xứng lợi ích; nhưng theo mục 4.2 phần khử nhiễu của nó ngang Aug, nên đánh giá lại sau khi thử biến thể ở mục 6.1 mới là kết luận công bằng.
 
 ## 11. Training Dynamics
 
@@ -247,7 +331,29 @@ outputs/results/
 ├── fig_answer_distribution.png         Phân bố answer type + độ dài
 ├── fig_noise_drop_ranking.png          Ranking noise impact
 ├── fig_recovery.png                    Recovery 2 methods per noise
-└── fig_method_summary.png              Tổng kết clean vs noisy
+├── fig_method_summary.png              Tổng kết clean vs noisy
+│
+│   # Phân rã hiệu ứng (mục 3, 4)
+├── relationship_metrics.csv            L, delta, R, rho, eta cho từng điều kiện
+├── fig_noise_floor.png                 Effect size vs ngưỡng tin cậy (mục 3)
+├── fig_recovery_equivalence.png        R_aug vs R_consistency (mục 4.2)
+├── fig_lift_decomposition.png          delta = L + R, dạng stacked (mục 4.2)
+├── fig_reducibility.png                Drop trước/sau robust hóa (mục 4.3)
+└── fig_retention.png                   Retention eta theo model (mục 4.4)
 ```
 
-Sinh lại figures: `python scripts/plot_report_figures.py`
+**Sinh lại toàn bộ figures + bảng số liệu bằng một lệnh:**
+
+```bash
+python scripts/plot_report_figures.py
+```
+
+Lệnh này tạo cả 9 figure, xuất `relationship_metrics.csv`, và in ra bảng tóm tắt
+$L$ / $R$ / $\rho$ kèm correlation — dùng để đối chiếu với các con số trong mục 4.
+Tùy chọn `--floor` đổi ngưỡng tin cậy (mặc định 0.006 = 0.6 điểm).
+
+Yêu cầu: 3 file `flow*_noise_l2.csv` phải có sẵn (sinh bởi `eval_noise_grid.py`).
+
+*(`scripts/analyze_relationships.py` vẫn chạy được nhưng đã deprecated — nó chỉ là
+wrapper gọi lại phần phân rã trong `plot_report_figures.py`.)*
+
