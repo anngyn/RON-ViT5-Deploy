@@ -337,6 +337,34 @@ ViT5 + Consistency & 83.97 & 82.92 & 1.05 \\
 \end{frame}
 
 \begin{frame}
+\frametitle{money\_noise vs date\_noise: cùng tham số, khác 27$\times$}
+
+\begin{block}{Nghịch lý}
+Cả 2 loại nhiễu dùng cùng xác suất áp dụng $p=0.30$ (L2), nhưng drop chênh nhau \textbf{27$\times$} (−4.99 vs −0.19 ANLS).
+\end{block}
+
+\vspace{0.2cm}
+
+\begin{table}
+\small
+\centering
+\begin{tabular}{lccc}
+\toprule
+\textbf{Field} & \textbf{\% answer khớp} & \textbf{Drop} & \textbf{Drop / \%exposure} \\
+\midrule
+money/number & 48.75\% & −4.99 & 0.102 \\
+date & 5.22\% & −0.19 & 0.036 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{0.2cm}
+
+\textbf{Kết luận:} exposure (tỷ lệ answer chứa field đó) — không phải xác suất nhiễu — mới là yếu tố chi phối ($9.3\times$ exposure gap). Ngay cả sau chuẩn hoá, money vẫn hại hơn $\sim2.8\times$/exposure vì số sai không có "gần đúng". Correlation prob-param vs drop trên 13 loại: $r=0.36$ (yếu).
+
+\end{frame}
+
+\begin{frame}
 \frametitle{So sánh khả năng phục hồi: Noisy Aug vs Consistency}
 
 \begin{center}
