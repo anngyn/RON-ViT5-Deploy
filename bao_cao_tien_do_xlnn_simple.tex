@@ -268,13 +268,17 @@ Subset & 100\% dữ liệu (full) \\
 \frametitle{Kế hoạch tiếp theo}
 
 \begin{enumerate}
-    \item Quét severity theo level (L1/L2/L3) để kiểm tra tính đơn điệu của suy giảm.
-    \item Multi-seed để ước lượng phương sai cho các mức chênh lệch nhỏ ($<0.002$ ANLS).
+    \item \textbf{Bootstrap CI trên per-sample ANLS} — hiện chỉ có điểm trung bình; cần khoảng tin cậy để biết các chênh lệch nhỏ ($<0.5$ ANLS) có ý nghĩa thống kê hay chỉ là nhiễu ngẫu nhiên.
+    \item \textbf{Error-type breakdown} — tách ``sai hoàn toàn'' (ANLS=0) vs ``gần đúng'' (0$<$ANLS$<$1), làm rõ noise gây lỗi kiểu nào.
+    \item Phân tích định tính: ví dụ input/output cụ thể trên các case money/mixed noise.
     \item Cân nhắc chạy thêm Adapter / RON-NACA nếu còn tài nguyên GPU.
-    \item Hoàn thiện báo cáo cuối kỳ với phân tích định tính (ví dụ input/output cụ thể).
 \end{enumerate}
 
-\vspace{0.25cm}
+\vspace{0.2cm}
+
+\footnotesize{\textit{Đã cân nhắc severity scaling (L1/L3) nhưng ưu tiên thấp hơn: cần train lại toàn bộ 3 flow (checkpoint cũ không giữ được), trong khi bootstrap CI/error breakdown mang lại độ tin cậy thống kê cao hơn với cùng 1 lần train.}}
+
+\vspace{0.2cm}
 
 \begin{alertblock}{Rủi ro và kiểm soát}
 Synthetic noise chưa phản ánh đầy đủ OCR thật; chỉ thử nghiệm trên một seed và một model (ViT5-base). Báo cáo mô tả rõ loại nhiễu, mức nhiễu, seed và giới hạn phạm vi kết luận.

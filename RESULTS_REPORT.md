@@ -194,10 +194,11 @@ Tất cả noise sinh bởi `OCRNoiseGenerator` (seed=42). Cường độ scale 
 
 ## 9. Limitations
 
-- **Một seed, một model.** Chưa chạy multi-seed để ước lượng phương sai; chênh lệch ANLS < 0.002 (glyph/dd/date) không đủ tin cậy để kết luận.
+- **Một seed, một model, chỉ điểm trung bình.** Chưa có bootstrap CI trên per-sample ANLS; chênh lệch < 0.5 ANLS (glyph/dd/date) không đủ tin cậy để kết luận có ý nghĩa thống kê hay không.
+- **Chưa có error-type breakdown.** ANLS trung bình không phân biệt "sai hoàn toàn" (ANLS=0) vs "gần đúng" — chưa biết noise gây lỗi kiểu nào.
 - **Noise tổng hợp.** Nhiễu sinh bằng luật, không phải OCR error thực tế từ ảnh receipt. Phân phối lỗi thật có thể khác.
 - **Chỉ ViT5-base.** Chưa so sánh với model khác (mBART, layout-aware như LiGT) để biết finding có tổng quát không.
-- **Level cố định L2 khi so sánh chính.** Chưa quét L1/L3 đầy đủ để xác nhận severity scaling monotonic.
+- **Level cố định L2 khi so sánh chính.** Chưa quét L1/L3; ưu tiên thấp hơn bootstrap CI/error breakdown vì checkpoint không giữ lại được (phải train lại toàn bộ 3 flow để làm bất kỳ phân tích thêm nào), nên chọn hướng mang lại độ tin cậy thống kê cao hơn với cùng chi phí train.
 - **Adapter/RON-NACA chưa chạy** — phạm vi báo cáo giới hạn ở clean vs augmentation vs consistency.
 
 ## 10. Compute Cost
