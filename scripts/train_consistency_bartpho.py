@@ -44,7 +44,7 @@ def setup_logging(log_file):
     )
 
 
-def main(config_path, skip_final_eval=False, batch_size_override=None):
+def main(config_path, skip_final_eval=False, batch_size_override=None, learning_rate_override=None, num_epochs_override=None):
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
@@ -53,6 +53,10 @@ def main(config_path, skip_final_eval=False, batch_size_override=None):
 
     if batch_size_override:
         config['batch_size'] = batch_size_override
+    if learning_rate_override:
+        config['learning_rate'] = learning_rate_override
+    if num_epochs_override:
+        config['num_epochs'] = num_epochs_override
 
     setup_logging(config['log_file'])
     logging.info(f"Config: {config_path}")
@@ -204,5 +208,10 @@ if __name__ == '__main__':
         help='Skip built-in clean/noisy test evaluation after training.',
     )
     parser.add_argument('--batch-size', type=int, help='Override config batch_size')
+    parser.add_argument('--learning-rate', type=float, help='Override config learning_rate')
+    parser.add_argument('--num-epochs', type=int, help='Override config num_epochs')
     args = parser.parse_args()
-    main(args.config, skip_final_eval=args.skip_final_eval, batch_size_override=args.batch_size)
+    main(args.config, skip_final_eval=args.skip_final_eval,
+         batch_size_override=args.batch_size,
+         learning_rate_override=args.learning_rate,
+         num_epochs_override=args.num_epochs)
