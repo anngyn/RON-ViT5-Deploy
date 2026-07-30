@@ -1,7 +1,7 @@
 # Data
 data/
 *.npy
-*.csv
+
 
 # Outputs
 outputs/
