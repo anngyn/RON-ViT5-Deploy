@@ -103,12 +103,15 @@ def main(config_path, skip_final_eval=False, batch_size_override=None, learning_
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=config['learning_rate'])
 
-    # Training loop
+    # Training loop with early stopping
     best_dev_anls = -1.0
+    patience = config.get('early_stopping_patience', 3)
+    patience_counter = 0
     os.makedirs(config['output_dir'], exist_ok=True)
 
     logging.info("=" * 60)
     logging.info(f"TRAINING: Baseline ({config['model_name']})")
+    logging.info(f"Early stopping patience: {patience}")
     logging.info("=" * 60)
 
     for epoch in range(1, config['num_epochs'] + 1):
@@ -123,9 +126,16 @@ def main(config_path, skip_final_eval=False, batch_size_override=None, learning_
 
         if dev_anls > best_dev_anls:
             best_dev_anls = dev_anls
+            patience_counter = 0
             model.save_pretrained(config['output_dir'])
             tokenizer.save_pretrained(config['output_dir'])
             logging.info(f"✓ Best model saved (ANLS: {dev_anls:.4f})")
+        else:
+            patience_counter += 1
+            logging.info(f"No improvement ({patience_counter}/{patience})")
+            if patience_counter >= patience:
+                logging.info(f"Early stopping triggered at epoch {epoch}")
+                break
 
     logging.info(f"\nBest Dev ANLS: {best_dev_anls:.4f}")
 
