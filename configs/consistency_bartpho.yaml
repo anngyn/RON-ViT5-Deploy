@@ -1,0 +1,29 @@
+# Consistency Only: BARTpho + consistency loss (no adapter)
+# Same config as consistency.yaml (ViT5) for like-for-like comparison
+method: consistency
+model_name: vinai/bartpho-syllable-base
+
+# Training
+batch_size: 8
+learning_rate: 5.0e-5
+num_epochs: 3
+subset_ratio: 1.0
+
+# Model
+freeze_base: false  # Full fine-tuning
+beta: 0.5  # Consistency loss weight
+
+# Data
+max_input_length: 256
+max_output_length: 64
+use_paired_data: true  # Clean + noisy pairs
+noise_types: [accent_removal, tone_confusion, vowel_diacritic_confusion, dd_confusion, character_confusion, glyph_confusion, character_deletion, token_deletion, line_shuffle, token_split, money_noise, date_noise, code_noise, mixed_noise]
+noise_level: 2
+noise_levels: [1, 2]
+report_noise_level: 2
+
+# Paths
+data_dir: data/ReceiptVQA-Dataset
+output_dir: outputs/models/consistency_bartpho
+results_file: outputs/results/consistency_bartpho_results.csv
+log_file: outputs/logs/consistency_bartpho.log
