@@ -1,14 +1,21 @@
 #!/bin/bash
 set -e
 
-BATCH_SIZE=${1:-8}  # default 8 if not provided
+BATCH_SIZE=${1:-8}
+LR=${2:-5e-5}
+EPOCHS=${3:-3}
 
 echo "=== Flow 3 (BARTpho): Consistency ==="
 echo "Train BARTpho-syllable-base on paired clean/noisy data with consistency loss. Eval on clean + 14 noises @ L2."
-echo "Batch size: $BATCH_SIZE"
+echo "Batch size: $BATCH_SIZE, LR: $LR, Epochs: $EPOCHS"
 echo ""
 
-python scripts/train_consistency_bartpho.py --config configs/consistency_bartpho.yaml --skip-final-eval --batch-size $BATCH_SIZE
+python scripts/train_consistency_bartpho.py \
+    --config configs/consistency_bartpho.yaml \
+    --skip-final-eval \
+    --batch-size $BATCH_SIZE \
+    --learning-rate $LR \
+    --num-epochs $EPOCHS
 
 echo ""
 echo "Evaluating consistency_bartpho on clean + 14 noises @ L2"
