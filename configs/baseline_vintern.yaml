@@ -1,0 +1,34 @@
+# Baseline: Vintern-1B (Method A, text-only) on clean OCR context
+# Multimodal ViT-MLP-LLM (InternViT-300M + Qwen2-0.5B); we LoRA-fine-tune the LLM only.
+method: baseline
+model_name: 5CD-AI/Vintern-1B-v2
+flow: baseline
+
+# If true: skip training, evaluate the base model zero-shot.
+zero_shot: false
+
+# Training (LoRA SFT of the embedded Qwen2 causal LM)
+batch_size: 2
+grad_accum: 8          # effective batch 16
+learning_rate: 1.0e-4
+num_epochs: 3
+subset_ratio: 1.0
+max_input_length: 1024 # causal prompt = system + question + OCR context
+max_output_length: 64
+
+# LoRA
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.05
+lora_targets: [q_proj, k_proj, v_proj, o_proj]
+
+# Dev checkpoint selection (generation is slow -> evaluate a subset)
+dev_eval_samples: 300
+eval_batch_size: 8
+eval_num_beams: 1
+
+# Paths
+data_dir: data/ReceiptVQA-Dataset
+output_dir: outputs/models/baseline_vintern
+results_file: outputs/results/baseline_vintern_results.csv
+log_file: outputs/logs/baseline_vintern.log

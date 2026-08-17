@@ -1,0 +1,35 @@
+# Consistency: Vintern-1B (Method A, text-only)
+# Clean/noisy pairs; loss = CE_clean + CE_noisy + beta * (1 - cos) on answer-region
+# hidden states of the Qwen2 LLM.
+method: consistency
+model_name: 5CD-AI/Vintern-1B-v2
+flow: consistency
+
+zero_shot: false
+
+batch_size: 1          # paired forward = 2 sequences/step; keep small
+grad_accum: 16         # effective batch 16
+learning_rate: 1.0e-4
+num_epochs: 3
+subset_ratio: 1.0
+max_input_length: 1024
+max_output_length: 64
+beta: 0.5              # consistency weight
+
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.05
+lora_targets: [q_proj, k_proj, v_proj, o_proj]
+
+noise_types: [accent_removal, tone_confusion, vowel_diacritic_confusion, dd_confusion, character_confusion, glyph_confusion, character_deletion, token_deletion, line_shuffle, token_split, money_noise, date_noise, code_noise, mixed_noise]
+noise_level: 2
+noise_levels: [1, 2]
+
+dev_eval_samples: 300
+eval_batch_size: 8
+eval_num_beams: 1
+
+data_dir: data/ReceiptVQA-Dataset
+output_dir: outputs/models/consistency_vintern
+results_file: outputs/results/consistency_vintern_results.csv
+log_file: outputs/logs/consistency_vintern.log

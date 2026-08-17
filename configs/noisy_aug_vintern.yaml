@@ -1,0 +1,34 @@
+# Noisy augmentation: Vintern-1B (Method A, text-only)
+# Same as baseline but the OCR context is randomly corrupted during training.
+method: noisy_aug
+model_name: 5CD-AI/Vintern-1B-v2
+flow: noisy_aug
+
+zero_shot: false
+
+batch_size: 2
+grad_accum: 8
+learning_rate: 1.0e-4
+num_epochs: 3
+subset_ratio: 1.0
+max_input_length: 1024
+max_output_length: 64
+
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.05
+lora_targets: [q_proj, k_proj, v_proj, o_proj]
+
+# Noise injected into the training context
+noise_types: [accent_removal, tone_confusion, vowel_diacritic_confusion, dd_confusion, character_confusion, glyph_confusion, character_deletion, token_deletion, line_shuffle, token_split, money_noise, date_noise, code_noise, mixed_noise]
+noise_level: 2
+noise_levels: [1, 2]
+
+dev_eval_samples: 300
+eval_batch_size: 8
+eval_num_beams: 1
+
+data_dir: data/ReceiptVQA-Dataset
+output_dir: outputs/models/noisy_aug_vintern
+results_file: outputs/results/noisy_aug_vintern_results.csv
+log_file: outputs/logs/noisy_aug_vintern.log
