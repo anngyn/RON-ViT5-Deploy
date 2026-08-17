@@ -1,0 +1,14 @@
+condition_id,noise_type,level,anls,drop_from_clean,model_tag
+clean,clean,0,0.425944785952369,0.0,bartpho_current_checkpoint
+N1,accent_removal,1,0.2989055157749015,0.12703927017746752,bartpho_current_checkpoint
+N1,accent_removal,3,0.2989055157749015,0.12703927017746752,bartpho_current_checkpoint
+N5,character_confusion,1,0.41009704944655523,0.01584773650581378,bartpho_current_checkpoint
+N5,character_confusion,3,0.35102671409748887,0.07491807185488014,bartpho_current_checkpoint
+N7,character_deletion,1,0.40730585792835783,0.01863892802401118,bartpho_current_checkpoint
+N7,character_deletion,3,0.36005235604117264,0.06589242991119637,bartpho_current_checkpoint
+N10,token_deletion,1,0.4168391951500299,0.009105590802339136,bartpho_current_checkpoint
+N10,token_deletion,3,0.3977861828744198,0.028158603077949207,bartpho_current_checkpoint
+N16,money_noise,1,0.3769120964886355,0.049032689463733514,bartpho_current_checkpoint
+N16,money_noise,3,0.2756262048765345,0.1503185810758345,bartpho_current_checkpoint
+N20,mixed_noise,1,0.3196820075828144,0.10626277836955461,bartpho_current_checkpoint
+N20,mixed_noise,3,0.20465086915564595,0.22129391679672306,bartpho_current_checkpoint
