@@ -9,7 +9,7 @@ echo "=== Flow 3 (Vintern-1B, text-only): Consistency ==="
 echo "LoRA-fine-tune on clean/noisy pairs + hidden-state consistency. Eval on clean + 14 noises @ L2."
 echo "Batch: $BATCH_SIZE, LR: $LR, Epochs: $EPOCHS"
 
-pip install -q peft accelerate timm einops sentencepiece
+pip install -q "transformers==4.37.2" "peft==0.10.0" accelerate timm einops sentencepiece
 
 python scripts/train_vintern.py \
     --config configs/consistency_vintern.yaml \

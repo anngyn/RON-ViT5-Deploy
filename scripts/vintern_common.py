@@ -19,6 +19,55 @@ run (the loader raises a clear error otherwise).
 """
 import os
 import sys
+import types
+import importlib.util
+
+# --------------------------------------------------------------------------- #
+# flash_attn stub (must run before any Vintern remote code is imported)
+# --------------------------------------------------------------------------- #
+# Vintern's remote modeling files (modeling_intern_vit.py / modeling_internvl_chat.py)
+# reference `flash_attn` at module top level. transformers' `check_imports` statically
+# scans those files and refuses to load the model when flash_attn is absent -- even
+# though Method A passes use_flash_attn=False and never launches a flash-attention
+# kernel. Building flash-attn from source is slow and brittle (notably on Kaggle T4),
+# so we register a lightweight stub instead. It satisfies the static import check; the
+# dummy callables raise only if flash attention is actually invoked, which cannot happen
+# while use_flash_attn=False (the model selects the eager attention path).
+if "flash_attn" not in sys.modules:
+    try:
+        import flash_attn  # noqa: F401  (real package present -> use it)
+    except ImportError:
+        def _flash_attn_unavailable(*args, **kwargs):  # pragma: no cover
+            raise RuntimeError(
+                "flash_attn is a stub (not installed). This path is unreachable "
+                "while use_flash_attn=False."
+            )
+
+        _fa_stub = types.ModuleType("flash_attn")
+        _fa_stub.__version__ = "0.0.0"
+        # A valid __spec__ is required: transformers probes flash-attn with
+        # importlib.util.find_spec(), which raises "flash_attn.__spec__ is None"
+        # on a bare types.ModuleType. With a spec present, find_spec() succeeds,
+        # then importlib.metadata.version() finds no distribution -> transformers
+        # concludes flash-attn is not installed and selects the eager path.
+        _fa_stub.__spec__ = importlib.util.spec_from_loader("flash_attn", loader=None)
+        for _fa_name in (
+            "flash_attn_func",
+            "flash_attn_varlen_func",
+            "flash_attn_qkvpacked_func",
+            "flash_attn_varlen_qkvpacked_func",
+        ):
+            setattr(_fa_stub, _fa_name, _flash_attn_unavailable)
+
+        _fa_bert_padding = types.ModuleType("flash_attn.bert_padding")
+        _fa_bert_padding.__spec__ = importlib.util.spec_from_loader(
+            "flash_attn.bert_padding", loader=None
+        )
+        for _fa_name in ("index_first_axis", "pad_input", "unpad_input"):
+            setattr(_fa_bert_padding, _fa_name, _flash_attn_unavailable)
+
+        sys.modules["flash_attn"] = _fa_stub
+        sys.modules["flash_attn.bert_padding"] = _fa_bert_padding
 
 import torch
 import torch.nn.functional as F
@@ -46,7 +95,7 @@ def load_vintern(model_name, device, dtype=torch.float16):
     ``language_model`` is the embedded Qwen2 causal LM that Method A fine-tunes /
     generates from. The vision tower is never called.
     """
-    from transformers import AutoModel, AutoTokenizer
+    from transformers import AutoConfig, AutoModel, AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained(
         model_name, trust_remote_code=True, use_fast=False
@@ -54,12 +103,21 @@ def load_vintern(model_name, device, dtype=torch.float16):
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
+    # Vintern-1B-v2's InternVLChatModel.__init__ signature is (config, vision_model,
+    # language_model) -- it does NOT accept a `use_flash_attn` kwarg (unlike upstream
+    # InternVL2). It builds its Qwen2 language model directly from `config.llm_config`,
+    # whose attention class is picked from `_attn_implementation`. Method A only ever
+    # runs the Qwen2 LLM, so we force eager attention there; combined with the flash_attn
+    # stub above this guarantees no flash-attention kernel is ever launched.
+    config = AutoConfig.from_pretrained(model_name, trust_remote_code=True)
+    if hasattr(config, "llm_config"):
+        config.llm_config._attn_implementation = "eager"
     model = AutoModel.from_pretrained(
         model_name,
+        config=config,
         torch_dtype=dtype,
         low_cpu_mem_usage=True,
         trust_remote_code=True,
-        use_flash_attn=False,
     )
     language_model = getattr(model, "language_model", None)
     if language_model is None:
@@ -213,24 +271,39 @@ def make_collate(tokenizer, mode):
 # --------------------------------------------------------------------------- #
 # Training loops (causal)
 # --------------------------------------------------------------------------- #
-def train_epoch_causal(model, loader, optimizer, device, grad_accum=1, epoch_num=0):
-    """Standard causal-LM SFT epoch (baseline / noisy-aug flows)."""
+def train_epoch_causal(model, loader, optimizer, device, scaler=None, grad_accum=1, epoch_num=0):
+    """Standard causal-LM SFT epoch (baseline / noisy-aug flows).
+
+    Uses autocast(fp16) + GradScaler when a scaler is provided. Pure-fp16 training
+    (no autocast/scaler) overflows softmax/cross-entropy on sm_75 GPUs and drives the
+    LoRA weights to NaN, which collapses ANLS to 0; the scaler skips inf/nan steps and
+    keeps the trainable (fp32) parameters stable.
+    """
     from tqdm import tqdm
 
+    use_amp = scaler is not None and scaler.is_enabled()
     model.train()
     total = 0.0
     optimizer.zero_grad()
     bar = tqdm(loader, desc=f"Epoch {epoch_num}")
     for step, batch in enumerate(bar):
-        out = model(
-            input_ids=batch["input_ids"].to(device),
-            attention_mask=batch["attention_mask"].to(device),
-            labels=batch["labels"].to(device),
-        )
+        with torch.autocast(device_type="cuda", dtype=torch.float16, enabled=use_amp):
+            out = model(
+                input_ids=batch["input_ids"].to(device),
+                attention_mask=batch["attention_mask"].to(device),
+                labels=batch["labels"].to(device),
+            )
         loss = out.loss / grad_accum
-        loss.backward()
+        if use_amp:
+            scaler.scale(loss).backward()
+        else:
+            loss.backward()
         if (step + 1) % grad_accum == 0:
-            optimizer.step()
+            if use_amp:
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                optimizer.step()
             optimizer.zero_grad()
         total += out.loss.item()
         bar.set_postfix({"loss": f"{out.loss.item():.4f}"})
@@ -243,11 +316,14 @@ def _masked_mean(hidden, labels):
     return (hidden * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1e-9)
 
 
-def train_epoch_causal_consistency(model, loader, optimizer, device, beta, grad_accum=1, epoch_num=0):
+def train_epoch_causal_consistency(model, loader, optimizer, device, beta, scaler=None,
+                                   grad_accum=1, epoch_num=0):
     """Consistency flow: CE_clean + CE_noisy + beta * (1 - cos) on the answer-region
-    hidden states of the clean vs noisy pass (same answer)."""
+    hidden states of the clean vs noisy pass (same answer). Uses autocast(fp16) +
+    GradScaler when a scaler is provided (see train_epoch_causal for the rationale)."""
     from tqdm import tqdm
 
+    use_amp = scaler is not None and scaler.is_enabled()
     model.train()
     total = 0.0
     optimizer.zero_grad()
@@ -256,28 +332,38 @@ def train_epoch_causal_consistency(model, loader, optimizer, device, beta, grad_
         clean_labels = batch["clean_labels"].to(device)
         noisy_labels = batch["noisy_labels"].to(device)
 
-        out_clean = model(
-            input_ids=batch["clean_input_ids"].to(device),
-            attention_mask=batch["clean_attention_mask"].to(device),
-            labels=clean_labels,
-            output_hidden_states=True,
-        )
-        out_noisy = model(
-            input_ids=batch["noisy_input_ids"].to(device),
-            attention_mask=batch["noisy_attention_mask"].to(device),
-            labels=noisy_labels,
-            output_hidden_states=True,
-        )
-        h_clean = _masked_mean(out_clean.hidden_states[-1], clean_labels)
-        h_noisy = _masked_mean(out_noisy.hidden_states[-1], noisy_labels)
-        cons = (1.0 - F.cosine_similarity(h_clean.float(), h_noisy.float(), dim=-1)).mean()
+        with torch.autocast(device_type="cuda", dtype=torch.float16, enabled=use_amp):
+            out_clean = model(
+                input_ids=batch["clean_input_ids"].to(device),
+                attention_mask=batch["clean_attention_mask"].to(device),
+                labels=clean_labels,
+                output_hidden_states=True,
+            )
+            out_noisy = model(
+                input_ids=batch["noisy_input_ids"].to(device),
+                attention_mask=batch["noisy_attention_mask"].to(device),
+                labels=noisy_labels,
+                output_hidden_states=True,
+            )
+            h_clean = _masked_mean(out_clean.hidden_states[-1], clean_labels)
+            h_noisy = _masked_mean(out_noisy.hidden_states[-1], noisy_labels)
+            # Cosine in fp32 for numerical stability regardless of autocast.
+            cons = (1.0 - F.cosine_similarity(h_clean.float(), h_noisy.float(), dim=-1)).mean()
+            batch_loss = out_clean.loss + out_noisy.loss + beta * cons
 
-        loss = (out_clean.loss + out_noisy.loss + beta * cons) / grad_accum
-        loss.backward()
+        loss = batch_loss / grad_accum
+        if use_amp:
+            scaler.scale(loss).backward()
+        else:
+            loss.backward()
         if (step + 1) % grad_accum == 0:
-            optimizer.step()
+            if use_amp:
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                optimizer.step()
             optimizer.zero_grad()
-        total += (out_clean.loss + out_noisy.loss + beta * cons).item()
+        total += batch_loss.item()
         bar.set_postfix({"ce_c": f"{out_clean.loss.item():.3f}",
                          "ce_n": f"{out_noisy.loss.item():.3f}",
                          "cons": f"{cons.item():.3f}"})
@@ -312,10 +398,12 @@ def generate_answers(model, tokenizer, qa_df, ocr_df, device, noise_gen=None,
             ]
             enc = tokenizer(prompts, return_tensors="pt", padding=True,
                             truncation=True, max_length=1024, add_special_tokens=False).to(device)
-            gen = model.generate(
-                **enc, max_new_tokens=max_new_tokens, num_beams=num_beams,
-                do_sample=False, pad_token_id=tokenizer.pad_token_id,
-            )
+            with torch.autocast(device_type="cuda", dtype=torch.float16,
+                                enabled=(device.type == "cuda")):
+                gen = model.generate(
+                    **enc, max_new_tokens=max_new_tokens, num_beams=num_beams,
+                    do_sample=False, pad_token_id=tokenizer.pad_token_id,
+                )
             new_tokens = gen[:, enc["input_ids"].shape[1]:]
             decoded = tokenizer.batch_decode(new_tokens, skip_special_tokens=True)
             preds.extend(d.strip() for d in decoded)

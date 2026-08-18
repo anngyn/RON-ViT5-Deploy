@@ -11,9 +11,14 @@ scripts/eval_noise_grid_vintern.py (called from the run_*.sh), so pass --skip-fi
 from the flow runner.
 """
 import argparse
+import gc
 import logging
 import os
 import sys
+
+# Reduce CUDA fragmentation on 16 GB GPUs (e.g. Kaggle T4). Must be set before torch
+# initialises the CUDA caching allocator, hence before `import torch`.
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 import torch
 import yaml
@@ -76,6 +81,24 @@ def main(args):
 
     model = vc.apply_lora(llm, config)
 
+    # Memory hygiene for 16 GB GPUs: checkpoint activations and drop the KV cache while
+    # training (cache is re-enabled only around the generation-based dev eval below).
+    # enable_input_require_grads() is required so gradients flow through the checkpointed,
+    # otherwise-frozen base model to the LoRA adapters.
+    llm.config.use_cache = False
+    try:
+        model.gradient_checkpointing_enable()
+        model.enable_input_require_grads()
+        logging.info("Gradient checkpointing enabled.")
+    except Exception as e:  # pragma: no cover - stay runnable if the PEFT API differs
+        logging.warning("Could not enable gradient checkpointing (%s); continuing.", e)
+
+    # Keep the trainable (LoRA) parameters in fp32 so AdamW + GradScaler stay numerically
+    # stable, while the frozen base weights remain in fp16 to save memory.
+    for p in model.parameters():
+        if p.requires_grad and p.dtype in (torch.float16, torch.bfloat16):
+            p.data = p.data.float()
+
     noise_gen = OCRNoiseGenerator(seed=42)
     train_ds = vc.VinternQADataset(
         train_qa, train_ocr, tokenizer, mode=mode, noise_gen=noise_gen,
@@ -93,6 +116,7 @@ def main(args):
         [p for p in model.parameters() if p.requires_grad], lr=config["learning_rate"]
     )
     grad_accum = config.get("grad_accum", 1)
+    scaler = torch.cuda.amp.GradScaler(enabled=(device.type == "cuda"))
 
     # Dev subset for checkpoint selection (generation is expensive).
     dev_n = min(config.get("dev_eval_samples", 300), len(dev_qa))
@@ -104,22 +128,35 @@ def main(args):
         logging.info("Epoch %d/%d", epoch, config["num_epochs"])
         if mode == "paired":
             vc.train_epoch_causal_consistency(
-                model, train_loader, optimizer, device, config.get("beta", 0.5), grad_accum, epoch
+                model, train_loader, optimizer, device, config.get("beta", 0.5),
+                scaler, grad_accum, epoch
             )
         else:
-            vc.train_epoch_causal(model, train_loader, optimizer, device, grad_accum, epoch)
+            vc.train_epoch_causal(model, train_loader, optimizer, device, scaler, grad_accum, epoch)
 
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
+            gc.collect()
+
+        llm.config.use_cache = True   # fast KV-cached generation for the dev eval
         dev_anls, _, _ = vc.evaluate_anls(
             model, tokenizer, dev_qa_small, dev_ocr, device,
             batch_size=config.get("eval_batch_size", 8),
             num_beams=config.get("eval_num_beams", 1), desc=f"Dev {epoch}",
         )
+        llm.config.use_cache = False
         logging.info("Dev ANLS (n=%d): %.4f", dev_n, dev_anls)
         if dev_anls > best_dev:
             best_dev = dev_anls
             model.save_pretrained(config["output_dir"])       # LoRA adapter only
             tokenizer.save_pretrained(config["output_dir"])
             logging.info("Best adapter saved (ANLS %.4f) -> %s", dev_anls, config["output_dir"])
+
+        # Free the eval-time KV cache before the next training epoch (prevents the
+        # epoch-boundary fragmentation OOM seen on T4).
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
+            gc.collect()
 
     logging.info("Best Dev ANLS: %.4f", best_dev)
     if args.skip_final_eval:

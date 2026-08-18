@@ -9,7 +9,7 @@ echo "=== Flow 1 (Vintern-1B, text-only): Baseline clean ==="
 echo "LoRA-fine-tune Qwen2 LLM inside Vintern-1B on clean OCR context. Eval on clean + 14 noises @ L2."
 echo "Batch: $BATCH_SIZE, LR: $LR, Epochs: $EPOCHS"
 
-pip install -q peft accelerate timm einops sentencepiece
+pip install -q "transformers==4.37.2" "peft==0.10.0" accelerate timm einops sentencepiece
 
 python scripts/train_vintern.py \
     --config configs/baseline_vintern.yaml \
