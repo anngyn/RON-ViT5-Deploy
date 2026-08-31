@@ -26,6 +26,7 @@ python scripts/eval_noise_grid_vintern.py \
     --model-dir outputs/models/noisy_aug_vintern \
     --model-tag vintern_aug \
     --levels 2 \
+    --max-eval-samples 1000 \
     --output-csv outputs/results/flow2_vintern_aug_noise_l2.csv
 
 echo ""

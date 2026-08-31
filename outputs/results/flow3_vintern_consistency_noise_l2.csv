@@ -1,0 +1,16 @@
+condition_id,noise_type,level,anls,drop_from_clean,model_tag
+clean,clean,0,0.8528364568898089,0.0,vintern_consistency
+N1,accent_removal,2,0.806543565761683,0.04629289112812596,vintern_consistency
+N2,tone_confusion,2,0.8401180318411935,0.012718425048615423,vintern_consistency
+N3,vowel_diacritic_confusion,2,0.846340922796164,0.006495534093644895,vintern_consistency
+N4,dd_confusion,2,0.8505767428455053,0.0022597140443035846,vintern_consistency
+N5,character_confusion,2,0.8209136997300597,0.03192275715974924,vintern_consistency
+N6,glyph_confusion,2,0.8521774850454823,0.0006589718443266168,vintern_consistency
+N7,character_deletion,2,0.8203192441289465,0.03251721276086239,vintern_consistency
+N10,token_deletion,2,0.8100863546818302,0.0427501022079787,vintern_consistency
+N13,line_shuffle,2,0.8477053652718751,0.005131091617933792,vintern_consistency
+N14,token_split,2,0.8396110888416677,0.013225368048141228,vintern_consistency
+N16,money_noise,2,0.8016484032682577,0.05118805362155121,vintern_consistency
+N17,date_noise,2,0.8512215446091072,0.0016149122807017635,vintern_consistency
+N18,code_noise,2,0.849714150601326,0.003122306288482868,vintern_consistency
+N20,mixed_noise,2,0.7384450701471192,0.11439138674268967,vintern_consistency

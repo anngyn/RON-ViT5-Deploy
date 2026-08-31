@@ -67,6 +67,11 @@ def main():
     ap.add_argument("--output-csv", required=True)
     ap.add_argument("--batch-size", type=int, default=8)
     ap.add_argument("--num-beams", type=int, default=1)
+    ap.add_argument("--max-eval-samples", type=int, default=None,
+                    help="Evaluate on a fixed random subset of the test questions "
+                         "(seed=42), so every condition and every flow use the same items "
+                         "and stay comparable. Cuts the 15-condition grid from hours to "
+                         "~1h on a T4. Default: full test set.")
     args = ap.parse_args()
 
     with open(args.config) as f:
@@ -83,6 +88,13 @@ def main():
     print("Device:", device, "| model_tag:", model_tag)
 
     (_, _), (_, _), (test_qa, test_ocr) = load_data(data_dir, config["subset_ratio"])
+
+    max_eval = args.max_eval_samples or config.get("eval_max_samples")
+    if max_eval and len(test_qa) > max_eval:
+        test_qa = test_qa.sample(n=max_eval, random_state=42).reset_index(drop=True)
+        print("Eval subset: %d test questions (fixed seed=42)" % max_eval)
+    else:
+        print("Eval on full test set: %d questions" % len(test_qa))
 
     _, tokenizer, base_llm = vc.load_vintern(config["model_name"], device, dtype)
     model = maybe_load_adapter(base_llm, model_dir)

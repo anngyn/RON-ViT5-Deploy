@@ -26,6 +26,7 @@ python scripts/eval_noise_grid_vintern.py \
     --model-dir outputs/models/consistency_vintern \
     --model-tag vintern_consistency \
     --levels 2 \
+    --max-eval-samples 1000 \
     --output-csv outputs/results/flow3_vintern_consistency_noise_l2.csv
 
 echo ""

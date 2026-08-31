@@ -26,6 +26,7 @@ python scripts/eval_noise_grid_vintern.py \
     --model-dir outputs/models/baseline_vintern \
     --model-tag vintern_clean \
     --levels 2 \
+    --max-eval-samples 1000 \
     --output-csv outputs/results/flow1_vintern_clean_noise_l2.csv
 
 echo ""
