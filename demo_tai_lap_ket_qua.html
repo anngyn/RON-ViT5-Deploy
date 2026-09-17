@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demo tái lập kết quả — RON-ViT5</title>
+  <style>
+    :root { --ink:#12233f; --muted:#5d6d82; --blue:#1263c6; --blue-weak:#eaf3ff; --teal:#008d8a; --line:#dbe4ef; --paper:#f5f8fc; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Arial, "Helvetica Neue", sans-serif; color:var(--ink); background:var(--paper); }
+    main { width:min(1520px, 100%); margin:auto; padding:30px 48px 40px; }
+    .eyebrow { color:var(--blue); font-size:14px; font-weight:700; letter-spacing:.11em; text-transform:uppercase; }
+    header { display:flex; justify-content:space-between; gap:30px; align-items:start; padding-bottom:22px; border-bottom:1px solid var(--line); }
+    h1 { margin:7px 0 8px; font-size:37px; letter-spacing:-.035em; }
+    .subtitle { margin:0; color:var(--muted); font-size:18px; line-height:1.45; }
+    .badge { max-width:325px; border:1px solid #e6b859; background:#fff8e6; color:#7a5211; padding:12px 15px; border-radius:10px; font-size:14px; line-height:1.4; }
+    .steps { display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; margin:22px 0; }
+    .step { background:white; border:1px solid var(--line); border-radius:11px; padding:13px 16px; min-height:82px; }
+    .step span { display:block; color:var(--blue); font-weight:700; font-size:13px; margin-bottom:5px; }
+    .step strong { font-size:16px; }
+    .tabs { display:flex; gap:9px; flex-wrap:wrap; margin:9px 0 18px; }
+    button { font:inherit; cursor:pointer; border-radius:9px; padding:10px 15px; border:1px solid var(--line); background:#fff; color:var(--ink); font-weight:700; }
+    button.active, button:hover { background:var(--blue); border-color:var(--blue); color:white; }
+    .grid { display:grid; grid-template-columns:.83fr 1.17fr; gap:20px; }
+    .panel { background:white; border:1px solid var(--line); border-radius:14px; padding:21px; box-shadow:0 3px 10px rgba(26,54,93,.035); }
+    h2 { font-size:20px; margin:0 0 14px; }
+    h3 { margin:0 0 8px; font-size:17px; }
+    .config { background:#0f2038; color:#dcecff; padding:16px; border-radius:9px; font:14px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; white-space:pre-wrap; }
+    .note { color:var(--muted); font-size:14px; line-height:1.48; margin:14px 0 0; }
+    .metrics { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin:0 0 13px; }
+    .metric { padding:13px; background:var(--blue-weak); border-radius:9px; }
+    .metric b { display:block; font-size:26px; color:var(--blue); }
+    .metric span { font-size:13px; color:var(--muted); }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th { text-align:left; padding:9px 8px; color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.04em; border-bottom:2px solid var(--line); }
+    td { padding:8px; border-bottom:1px solid var(--line); }
+    td:last-child, th:last-child { text-align:right; }
+    .high { color:#b93a22; font-weight:700; }
+    .viz { margin-top:20px; }
+    .chart { width:100%; max-height:420px; object-fit:contain; border:1px solid var(--line); border-radius:10px; background:#fff; }
+    .chart-nav { display:flex; gap:8px; margin:11px 0; }
+    .chart-nav button { padding:7px 10px; font-size:13px; }
+    .command { margin-top:20px; display:flex; align-items:center; justify-content:space-between; gap:16px; background:#edf8f7; border:1px solid #c8e8e4; border-radius:12px; padding:16px 18px; }
+    code { color:#006d69; font-weight:700; }
+    #status { color:var(--teal); font-size:14px; font-weight:700; }
+    footer { margin-top:20px; color:var(--muted); font-size:13px; }
+    @media (max-width:900px) { main { padding:22px; } header,.grid { display:block; } .badge { margin-top:15px; } .steps { grid-template-columns:repeat(2,1fr); } .panel + .panel { margin-top:18px; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <div class="eyebrow">RON-ViT5 • ReceiptVQA • Demo báo cáo</div>
+      <h1>Demo tái lập kết quả thực nghiệm</h1>
+      <p class="subtitle">Từ cấu hình thí nghiệm → CSV kết quả L2 → biểu đồ báo cáo.</p>
+    </div>
+    <div class="badge"><b>Phạm vi demo</b><br>Không chạy inference từng hóa đơn: checkout không lưu checkpoint. Các số và biểu đồ bên dưới lấy từ kết quả đã lưu.</div>
+  </header>
+
+  <section class="steps" aria-label="Các bước demo">
+    <div class="step"><span>Bước 1</span><strong>Chọn cấu hình</strong></div>
+    <div class="step"><span>Bước 2</span><strong>Đọc kết quả L2</strong></div>
+    <div class="step"><span>Bước 3</span><strong>So sánh độ bền</strong></div>
+    <div class="step"><span>Bước 4</span><strong>Sinh biểu đồ</strong></div>
+  </section>
+
+  <div class="tabs" aria-label="Chọn phương pháp">
+    <button class="active" data-method="baseline">ViT5 baseline</button>
+    <button data-method="augment">ViT5 + Noisy Aug</button>
+    <button data-method="consistency">ViT5 + Consistency</button>
+  </div>
+
+  <section class="grid">
+    <article class="panel">
+      <h2>1. Cấu hình đã chạy</h2>
+      <div class="config" id="config"></div>
+      <p class="note" id="config-note"></p>
+    </article>
+    <article class="panel">
+      <h2>2. Kết quả đánh giá tại L2</h2>
+      <div class="metrics">
+        <div class="metric"><b id="clean">–</b><span>ANLS clean</span></div>
+        <div class="metric"><b id="avg">–</b><span>ANLS trung bình 14 nhiễu</span></div>
+        <div class="metric"><b id="drop">–</b><span>Drop trung bình</span></div>
+      </div>
+      <table>
+        <thead><tr><th>Loại nhiễu</th><th>ANLS</th><th>Drop so với clean</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </article>
+  </section>
+
+  <section class="panel viz">
+    <h2>3. Đối chiếu bằng biểu đồ đã sinh</h2>
+    <div class="chart-nav">
+      <button class="active" data-chart="summary">Tóm tắt phương pháp</button>
+      <button data-chart="ranking">Mức ảnh hưởng nhiễu</button>
+      <button data-chart="recovery">Khả năng phục hồi</button>
+    </div>
+    <img id="chart" class="chart" src="outputs/results/fig_method_summary.png" alt="Biểu đồ kết quả thực nghiệm">
+    <p class="note" id="chart-note">So sánh clean ANLS, ANLS trung bình dưới 14 nhiễu và mức suy giảm của ba phương pháp.</p>
+  </section>
+
+  <section class="command">
+    <div><h3>Tái lập biểu đồ từ các CSV hiện có</h3><code>python scripts/plot_report_figures.py</code><p class="note">Lệnh đọc dữ liệu trong <code>outputs/results/</code> và ghi lại các ảnh biểu đồ. Không cần checkpoint.</p></div>
+    <button id="replay">Hiển thị bước tái lập</button>
+  </section>
+  <div id="status" aria-live="polite"></div>
+  <footer>Nguồn nội bộ: <code>configs/*.yaml</code> và <code>outputs/results/flow{1,2,3}_vit_*_noise_l2.csv</code>. Kết quả thuộc cấu hình/seed đã chạy; chưa có confidence interval.</footer>
+</main>
+
+<script>
+const noise = ["accent_removal","tone_confusion","vowel_diacritic_confusion","dd_confusion","character_confusion","glyph_confusion","character_deletion","token_deletion","line_shuffle","token_split","money_noise","date_noise","code_noise","mixed_noise"];
+const configs = {
+  baseline: { text:`method: baseline\nmodel_name: VietAI/vit5-base\nbatch_size: 8\nlearning_rate: 5.0e-5\nnum_epochs: 3\nuse_noisy_aug: false\nnoise_level: 2`, note:"Huấn luyện ViT5 trên dữ liệu clean; đây là mốc tham chiếu để đo suy giảm khi OCR context bị nhiễu." },
+  augment: { text:`method: noisy_aug\nmodel_name: VietAI/vit5-base\nbatch_size: 8\nnum_epochs: 3\nuse_noisy_aug: true\naugmentation_ratio: 1.0\nnoise_level: 2`, note:"Noisy Aug dùng tỷ lệ clean:noisy là 1:1. Vì vậy cần diễn giải công bằng ngân sách: số dữ liệu/updates nhiều hơn baseline." },
+  consistency: { text:`method: consistency\nmodel_name: VietAI/vit5-base\nbatch_size: 8\nnum_epochs: 3\nuse_paired_data: true\nbeta: 0.5\nreport_noise_level: 2`, note:"Consistency ràng buộc biểu diễn clean/noisy gần nhau, sử dụng cặp dữ liệu clean–noisy." }
+};
+const values = {
+  baseline: [[.809563,.031503],[.830882,.010184],[.832922,.008145],[.841260,-.000194],[.824025,.017042],[.840253,.000814],[.820409,.020657],[.818508,.022559],[.835861,.005206],[.827026,.014040],[.791122,.049945],[.839193,.001874],[.835285,.005782],[.742248,.098819]],
+  augment: [[.834808,.018611],[.842541,.010878],[.844173,.009246],[.851928,.001491],[.847965,.005453],[.852615,.000804],[.835667,.017752],[.836269,.017150],[.849206,.004212],[.844090,.009329],[.842137,.011282],[.853645,-.000226],[.850710,.002709],[.806153,.047266]],
+  consistency: [[.824822,.014928],[.829606,.010144],[.835718,.004031],[.839734,.000016],[.836876,.002873],[.838942,.000808],[.822472,.017278],[.822006,.017744],[.835120,.004630],[.829042,.010707],[.826336,.013414],[.839560,.000190],[.837013,.002736],[.791121,.048629]]
+};
+const clean = {baseline:.841067, augment:.853419, consistency:.839750};
+function pct(v) { return (v*100).toFixed(2); }
+function render(method) {
+  document.querySelectorAll('[data-method]').forEach(b => b.classList.toggle('active', b.dataset.method === method));
+  document.querySelector('#config').textContent = configs[method].text;
+  document.querySelector('#config-note').textContent = configs[method].note;
+  const data = values[method]; const avg = data.reduce((s,x)=>s+x[0],0)/data.length;
+  document.querySelector('#clean').textContent = pct(clean[method]);
+  document.querySelector('#avg').textContent = pct(avg);
+  document.querySelector('#drop').textContent = pct(clean[method]-avg);
+  document.querySelector('#rows').innerHTML = data.map((x,i) => `<tr><td>${noise[i]}</td><td>${pct(x[0])}</td><td class="${x[1]>.025?'high':''}">${pct(x[1])}</td></tr>`).join('');
+}
+document.querySelectorAll('[data-method]').forEach(b => b.onclick = () => render(b.dataset.method));
+const charts = {
+  summary: ["outputs/results/fig_method_summary.png", "So sánh clean ANLS, ANLS trung bình dưới 14 nhiễu và mức suy giảm của ba phương pháp."],
+  ranking: ["outputs/results/fig_noise_drop_ranking.png", "Xếp hạng mức suy giảm của ViT5 baseline theo loại nhiễu ở L2; mixed_noise và money_noise nổi bật."],
+  recovery: ["outputs/results/fig_recovery.png", "So sánh mức phục hồi của Noisy Aug và Consistency theo từng loại nhiễu; đây là phần dùng để giải thích trade-off."],
+};
+document.querySelectorAll('[data-chart]').forEach(b => b.onclick = () => { document.querySelectorAll('[data-chart]').forEach(x=>x.classList.toggle('active',x===b)); const [src,note]=charts[b.dataset.chart]; document.querySelector('#chart').src=src; document.querySelector('#chart-note').textContent=note; });
+document.querySelector('#replay').onclick = () => { const s=document.querySelector('#status'); s.textContent='Bước tái lập: đọc 3 CSV L2 → tổng hợp ANLS/drop → ghi biểu đồ vào outputs/results/.'; };
+render('baseline');
+</script>
+</body>
+</html>
