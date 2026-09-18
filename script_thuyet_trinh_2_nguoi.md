@@ -18,7 +18,7 @@
 
 ### Slide 1 — Giới thiệu — khoảng 30 giây
 
-“Em xin chào thầy cô. Em là Ấn, hôm nay nhóm em gồm Ấn và Điền sẽ trình bày báo cáo tiến độ về độ bền của mô hình hỏi đáp hóa đơn tiếng Việt trước lỗi OCR.
+“Em xin chào thầy cô. Em là Ấn, hôm nay nhóm em gồm Ấn và Điền sẽ trình bày báo cáo cuối kỳ về độ bền của mô hình hỏi đáp hóa đơn tiếng Việt trước lỗi OCR.
 
 Nói đơn giản, nhóm đưa vào một câu hỏi cùng phần văn bản OCR của hóa đơn, sau đó mô hình phải tìm ra câu trả lời ngắn như tổng tiền, ngày hoặc tên cửa hàng. Trong bài này, nhóm tập trung xem khi OCR bị sai thì mô hình giảm chất lượng như thế nào, và cách huấn luyện với dữ liệu nhiễu có giúp mô hình bền hơn không.
 
@@ -44,7 +44,7 @@ Với người nhìn, chúng ta vẫn đoán được đây là một con số. 
 
 Thứ nhất, xây một baseline ViT5 trên dữ liệu OCR sạch. Thứ hai, tạo 14 loại nhiễu có kiểm soát ở mức L2 để biết từng loại nhiễu ảnh hưởng ra sao. Thứ ba, so sánh hai hướng huấn luyện là Noisy Aug và Consistency.
 
-Ba câu hỏi nhóm muốn trả lời là: nhiễu nào gây giảm điểm mạnh nhất, thêm dữ liệu nhiễu có giúp mô hình phục hồi không, và consistency có giữ được điểm trên dữ liệu sạch hay phải đánh đổi. Ở giai đoạn hiện tại, phạm vi mới là một backbone ViT5, một seed và synthetic noise.”
+Ba câu hỏi nhóm trả lời là: nhiễu nào gây giảm điểm mạnh nhất, thêm dữ liệu nhiễu có giúp mô hình phục hồi không, và consistency có giữ được điểm trên dữ liệu sạch hay phải đánh đổi. Phạm vi kết luận của báo cáo là một backbone ViT5, một seed và synthetic noise.”
 
 ### Slide 5 — Dữ liệu — khoảng 45 giây
 
@@ -78,11 +78,11 @@ Ngoài từng loại riêng lẻ, nhóm còn có mixed noise, tức là kết h�
 
 Các flow được train trên full data trong ba epoch. Noise generator dùng seed 42 và tất cả phương pháp dùng cùng test set. Những điểm này giúp kết quả có thể đối chiếu trực tiếp, dù chúng ta vẫn phải nhớ rằng hiện tại mới có một seed.”
 
-### Slide 9 — Tiến độ — khoảng 35 giây
+### Slide 9 — Phạm vi đánh giá và đầu ra — khoảng 35 giây
 
-“Tính đến mốc báo cáo, nhóm đã chạy đủ ba phương pháp và 14 điều kiện nhiễu ở L2. Các đầu ra đã có gồm CSV đánh giá, bảng ranking mức ảnh hưởng của noise và biểu đồ recovery.
+“Trong phạm vi báo cáo cuối kỳ, nhóm đã chạy đủ ba phương pháp và 14 điều kiện nhiễu ở L2. Các đầu ra dùng cho phân tích gồm CSV đánh giá, bảng ranking mức ảnh hưởng của noise và biểu đồ recovery.
 
-Phần còn thiếu là các thí nghiệm equal-budget, nhiều seed và dự đoán lưu theo từng mẫu. Vì vậy ở các slide kết quả, nhóm sẽ nói rõ đâu là kết quả quan sát được và đâu mới chỉ là giả thuyết cần kiểm tra thêm.”
+Các giới hạn cần ghi rõ là chưa có equal-budget, chưa có nhiều seed và chưa lưu prediction theo từng mẫu. Vì vậy nhóm sẽ phân biệt rõ kết quả quan sát được trong cấu hình này với những giả thuyết chưa thể khẳng định rộng hơn.”
 
 ### Slide 10 — Kết quả tổng hợp — khoảng 1 phút 20 giây
 
@@ -92,7 +92,7 @@ Trong lần chạy hiện tại, Noisy Aug đạt ANLS 85,34 trên clean và 84,
 
 Có một lưu ý rất quan trọng khi đọc con số này: Noisy Aug dùng cả N mẫu sạch và N mẫu nhiễu. Vì vậy số mẫu và số optimizer update gần gấp đôi baseline. Nói cách khác, chúng ta có thể kết luận Noisy Aug đạt điểm tuyệt đối cao nhất trong cấu hình đã chạy, nhưng chưa thể nói toàn bộ mức tăng chỉ đến từ augmentation.
 
-Để kết luận công bằng hơn, bước tiếp theo là chạy equal-budget, tức giữ ngân sách update tương đương giữa các phương pháp.”
+Để mở rộng kết luận sau báo cáo, cần chạy equal-budget, tức giữ ngân sách update tương đương giữa các phương pháp.”
 
 ### Slide 11 — Ranking nhiễu — khoảng 50 giây
 
@@ -116,7 +116,7 @@ Kết quả này cho thấy lỗi kết hợp và lỗi ở trường tiền đ�
 
 Một proxy giải thích là tỷ lệ đáp án liên quan đến tiền hoặc số khoảng 48,75 phần trăm, trong khi tỷ lệ đáp án dạng ngày chỉ khoảng 5,22 phần trăm. Tuy nhiên, đây chỉ là gợi ý. Noise tác động vào toàn bộ OCR context nên chưa thể nói tỷ lệ này là nguyên nhân trực tiếp.
 
-Bước cần làm tiếp theo là lưu prediction từng mẫu và kiểm tra đúng những mẫu có trường tiền bị thay đổi.”
+Một hướng kiểm chứng sau báo cáo là lưu prediction từng mẫu và kiểm tra đúng những mẫu có trường tiền bị thay đổi.”
 
 ### Slide 14 — Recovery — khoảng 40 giây
 
@@ -176,17 +176,17 @@ Lệnh này chỉ tổng hợp kết quả và tạo biểu đồ, không cần 
 
 ---
 
-## Slide 16 — Việc tiếp theo — khoảng 45 giây
+## Slide 16 — Giới hạn và hướng phát triển — khoảng 45 giây
 
-“Sau kết quả hiện tại, nhóm ưu tiên ba việc.
+“Để diễn giải đúng kết quả cuối kỳ, nhóm ghi nhận ba hướng phát triển.
 
 Thứ nhất là chạy equal-budget giữa baseline và Noisy Aug để tách tác động của augmentation khỏi số optimizer update. Thứ hai là lưu prediction từng mẫu để tính bootstrap confidence interval. Thứ ba là phân tích trực tiếp các OCR context bị ảnh hưởng bởi money và mixed noise.
 
 Kết luận hiện tại chỉ áp dụng cho synthetic noise, một seed và benchmark L2; nhóm chưa đánh giá trên OCR engine thật.”
 
-## Slide 17 — Hướng mở rộng — khoảng 30 giây
+## Slide 17 — Mở rộng sau báo cáo — khoảng 30 giây
 
-“Sau khi benchmark công bằng hoàn tất, nhóm có thể mở rộng sang Adapter Only và RON-NACA. Hai hướng này mới là kế hoạch, chưa chạy trong kết quả hiện tại, nên nhóm không dùng chúng để suy luận hay so sánh ở báo cáo này.”
+“Sau khi benchmark công bằng hoàn tất, nhóm có thể mở rộng sang Adapter Only và RON-NACA. Hai hướng này nằm ngoài phạm vi báo cáo cuối kỳ, nên nhóm không dùng chúng để suy luận hay so sánh với các kết quả đã trình bày.”
 
 ## Slide 18 — Kết luận — khoảng 50 giây
 

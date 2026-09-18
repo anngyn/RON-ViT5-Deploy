@@ -26,7 +26,7 @@
 }
 
 \title[CĐNLP]{Phân tích độ bền vững của mô hình hỏi đáp hóa đơn tiếng Việt trước lỗi OCR}
-\subtitle{Báo cáo tiến độ môn Chuyên đề Xử lý Ngôn ngữ Tự nhiên}
+\subtitle{Báo cáo cuối kỳ môn Chuyên đề Xử lý Ngôn ngữ Tự nhiên}
 \author{Nhóm 19}
 \institute[UIT]{Trường Đại học Công nghệ Thông tin \\ Đại học Quốc gia TP.HCM}
 \date{\today}
@@ -252,10 +252,10 @@ Seed noise = 42 \quad cùng test set \quad synthetic OCR noise tại L2
 
 \end{frame}
 
-\section{Tiến độ}
+\section{Phạm vi và kết quả thực nghiệm}
 
 \begin{frame}
-\frametitle{Tiến độ thực hiện}
+\frametitle{Phạm vi đánh giá và đầu ra}
 
 \begin{center}
 \textbf{3 phương pháp \qquad 14 nhiễu \qquad 1 benchmark L2}
@@ -264,14 +264,14 @@ Seed noise = 42 \quad cùng test set \quad synthetic OCR noise tại L2
 \vspace{0.45cm}
 \begin{columns}[T,onlytextwidth]
 \begin{column}{0.48\textwidth}
-\begin{block}{Đã hoàn thành}
+\begin{block}{Phạm vi đánh giá}
 Dataset và loader\\
 Taxonomy nhiễu\\
 Huấn luyện và đánh giá
 \end{block}
 \end{column}
 \begin{column}{0.48\textwidth}
-\begin{block}{Đầu ra đã lưu}
+\begin{block}{Đầu ra báo cáo}
 CSV cho 3 flow\\
 Ranking noise\\
 Biểu đồ recovery
@@ -400,7 +400,7 @@ Consistency: clean 83.97, thấp hơn baseline 0.14. Giả thuyết: over-regula
 
 \end{frame}
 \begin{frame}
-\frametitle{Kế hoạch tiếp theo}
+\frametitle{Giới hạn và hướng phát triển}
 
 \begin{enumerate}
     \item Equal-budget run cho baseline và Noisy Aug
@@ -408,7 +408,7 @@ Consistency: clean 83.97, thấp hơn baseline 0.14. Giả thuyết: over-regula
     \item Phân tích money/mixed trên OCR context bị ảnh hưởng
 \end{enumerate}
 
-\begin{alertblock}{Giới hạn cần giữ}
+\begin{alertblock}{Giới hạn của kết luận}
 Synthetic noise, một seed, L2. Chưa đánh giá OCR engine thực.
 \end{alertblock}
 
@@ -439,7 +439,7 @@ Adapter Only: ít tham số cập nhật\\
 RON-NACA: adapter + consistency
 \end{block}
 
-\textbf{Trạng thái:} chưa chạy. Thực hiện sau equal-budget run và confidence interval.
+\textbf{Ngoài phạm vi báo cáo:} sẽ dùng cho thí nghiệm mở rộng sau khi hoàn tất equal-budget run và confidence interval.
 
 \end{frame}
 
