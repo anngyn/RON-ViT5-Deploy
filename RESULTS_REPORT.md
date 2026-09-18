@@ -1,6 +1,6 @@
 # ReceiptVQA OCR Noise Robustness — Kết Quả Thí Nghiệm
 
-Phân tích tác động của nhiễu OCR lên ViT5 cho bài toán Vietnamese ReceiptVQA, và đánh giá 2 phương pháp tăng độ bền: **Noisy Augmentation** và **Consistency Regularization**.
+Phân tích tác động của nhiễu OCR lên ViT5 cho bài toán Vietnamese ReceiptVQA, đánh giá 2 phương pháp tăng độ bền (**Noisy Augmentation** và **Consistency Regularization**), đồng thời bổ sung pilot mT5/BARTpho để kiểm tra pattern vulnerability có lặp lại khi đổi backbone hay không. ViT5 vẫn là backbone chính; các số liệu pilot được trình bày ở mức chart-backed vì checkout hiện tại không còn raw CSV/log tương ứng.
 
 ## 1. Thiết Lập Thí Nghiệm
 
@@ -126,6 +126,17 @@ Phân tích tác động của nhiễu OCR lên ViT5 cho bài toán Vietnamese R
 - **Recovery tỉ lệ với severity:** noise càng hại, method càng cứu nhiều. Money & mixed được cứu nhiều nhất.
 - **Consistency yếu ở noise nhẹ:** một số gain âm (glyph, line, dd, tone) → constraint làm giảm nhẹ hiệu năng.
 
+### Pilot mT5 và BARTpho theo severity
+
+Để kiểm tra tính lặp lại của pattern lỗi ngoài ViT5, nhóm có thêm pilot trên mT5 và BARTpho ở các mức severity L1–L3. Retention giảm đơn điệu trên cả hai backbone:
+
+| Backbone | Clean | L1 | L2 | L3 | Atomic macro drop L1/L2/L3 |
+|----------|:-----:|:--:|:--:|:--:|:---------------------------:|
+| mT5 | 100,0% | 98,0% | 96,2% | 94,0% | 0,99 / 2,11 / 3,47 |
+| BARTpho | 100,0% | 93,9% | 90,3% | 86,4% | 1,09 / 2,38 / 3,85 |
+
+Ở L3, mixed noise gây drop khoảng 22,3 điểm với mT5 và 22,1 điểm với BARTpho; money noise đứng thứ hai với khoảng 13,6 và 15,0 điểm. Ranking noise giữa hai backbone có Spearman $\rho=0,899$ (L1), $0,881$ (L2) và $0,873$ (L3). Đây là tín hiệu pilot để củng cố hướng phân tích, không phải bảng xếp hạng model thắng thua; raw CSV, log và checkpoint pilot cần được phục hồi trước khi tuyên bố tổng quát rộng.
+
 ## 5. Tại Sao Consistency Kém Hơn Noisy Aug?
 
 Cả 2 đều huấn luyện trên clean + noisy (nội dung data giống nhau). Khác biệt nằm ở cách dùng:
@@ -197,7 +208,7 @@ Tất cả noise sinh bởi `OCRNoiseGenerator` (seed=42). Cường độ scale 
 - **Một seed, một model, chỉ điểm trung bình.** Chưa có bootstrap CI trên per-sample ANLS; chênh lệch < 0.5 ANLS (glyph/dd/date) không đủ tin cậy để kết luận có ý nghĩa thống kê hay không.
 - **Chưa có error-type breakdown.** ANLS trung bình không phân biệt "sai hoàn toàn" (ANLS=0) vs "gần đúng" — chưa biết noise gây lỗi kiểu nào.
 - **Noise tổng hợp.** Nhiễu sinh bằng luật, không phải OCR error thực tế từ ảnh receipt. Phân phối lỗi thật có thể khác.
-- **Chỉ ViT5-base.** Chưa so sánh với model khác (mBART, layout-aware như LiGT) để biết finding có tổng quát không.
+- **ViT5-base là backbone chính.** mT5 và BARTpho mới ở mức pilot chart-backed theo severity; chưa có raw CSV/log/checkpoint để so sánh đầy đủ, và chưa có đánh giá với mBART hay model layout-aware như LiGT.
 - **Level cố định L2 khi so sánh chính.** Chưa quét L1/L3; ưu tiên thấp hơn bootstrap CI/error breakdown vì checkpoint không giữ lại được (phải train lại toàn bộ 3 flow để làm bất kỳ phân tích thêm nào), nên chọn hướng mang lại độ tin cậy thống kê cao hơn với cùng chi phí train.
 - **Adapter/RON-NACA chưa chạy** — phạm vi báo cáo giới hạn ở clean vs augmentation vs consistency.
 

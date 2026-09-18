@@ -1,6 +1,6 @@
 # Kịch bản thuyết trình 2 người — bản nói tự nhiên
 
-**Phân vai:** Ấn nói liền mạch slide 1–12. Điền nhận từ slide 13 đến slide 19, bao gồm toàn bộ demo. Chỉ chuyển người một lần sau slide 12.
+**Phân vai:** Ấn nói liền mạch slide 1–14. Điền nhận từ slide 15 đến slide 21, bao gồm toàn bộ demo. Chỉ chuyển người một lần sau slide 14.
 
 **Thời lượng:** khoảng 16–18 phút, trong đó demo khoảng 4 phút. Người đang nói bật webcam ở góc phải dưới; khi chuyển người chỉ cần nói câu bàn giao, không phải dừng video.
 
@@ -14,7 +14,7 @@
 
 ---
 
-## Phần 1 — Ấn nói slide 1–12
+## Phần 1 — Ấn nói slide 1–14
 
 ### Slide 1 — Giới thiệu — khoảng 30 giây
 
@@ -44,7 +44,7 @@ Với người nhìn, chúng ta vẫn đoán được đây là một con số. 
 
 Thứ nhất, xây một baseline ViT5 trên dữ liệu OCR sạch. Thứ hai, tạo 14 loại nhiễu có kiểm soát ở mức L2 để biết từng loại nhiễu ảnh hưởng ra sao. Thứ ba, so sánh hai hướng huấn luyện là Noisy Aug và Consistency.
 
-Ba câu hỏi nhóm trả lời là: nhiễu nào gây giảm điểm mạnh nhất, thêm dữ liệu nhiễu có giúp mô hình phục hồi không, và consistency có giữ được điểm trên dữ liệu sạch hay phải đánh đổi. Phạm vi kết luận của báo cáo là một backbone ViT5, một seed và synthetic noise.”
+Ba câu hỏi nhóm trả lời là: nhiễu nào gây giảm điểm mạnh nhất, thêm dữ liệu nhiễu có giúp mô hình phục hồi không, và consistency có giữ được điểm trên dữ liệu sạch hay phải đánh đổi. Kết quả chính dùng ViT5 với một seed và synthetic noise; mT5 cùng BARTpho được chạy ở mức pilot để kiểm tra pattern lỗi có lặp lại khi đổi backbone hay không.”
 
 ### Slide 5 — Dữ liệu — khoảng 45 giây
 
@@ -94,23 +94,39 @@ Có một lưu ý rất quan trọng khi đọc con số này: Noisy Aug dùng c
 
 Để mở rộng kết luận sau báo cáo, cần chạy equal-budget, tức giữ ngân sách update tương đương giữa các phương pháp.”
 
-### Slide 11 — Ranking nhiễu — khoảng 50 giây
+### Slide 11 — Độ bền mT5 và BARTpho theo severity — khoảng 55 giây
+
+“Ngoài ViT5, nhóm còn chạy pilot trên hai backbone khác là mT5 và BARTpho để kiểm tra pattern lỗi có lặp lại hay không.
+
+Khi severity tăng từ L1 lên L3, retention của mT5 giảm từ 98,0 xuống 96,2 rồi 94,0 phần trăm. BARTpho giảm từ 93,9 xuống 90,3 rồi 86,4 phần trăm.
+
+Điểm chính ở đây là cả hai model đều giảm khi OCR xấu hơn. BARTpho giảm tương đối mạnh hơn trong pilot này. Nhóm dùng kết quả này để kiểm tra tính ổn định của vulnerability pattern, không dùng nó để tuyên bố model nào thắng tuyệt đối.”
+
+### Slide 12 — Noise chi phối giữa các backbone — khoảng 55 giây
+
+“Ở severity L3, mixed noise vẫn gây suy giảm lớn nhất, khoảng 22,3 điểm với mT5 và 22,1 điểm với BARTpho. Money noise đứng thứ hai, lần lượt khoảng 13,6 và 15,0 điểm.
+
+Thứ hạng noise giữa hai backbone có tương quan Spearman 0,899 ở L1, 0,881 ở L2 và 0,873 ở L3. Nghĩa là khi đổi backbone, nhóm noise gây hại vẫn khá ổn định.
+
+Atomic macro drop tăng theo severity ở cả hai model. mT5 là 0,99, 2,11 và 3,47 điểm; BARTpho là 1,09, 2,38 và 3,85 điểm từ L1 đến L3. N1 được tách riêng vì không có severity thực, còn mixed là stress test.”
+
+### Slide 13 — Ranking nhiễu ViT5 tại L2 — khoảng 50 giây
 
 “Nếu nhìn riêng baseline, mixed noise gây giảm mạnh nhất, khoảng 9,88 điểm ANLS. Money noise đứng thứ hai, giảm khoảng 4,99 điểm. Các loại còn lại thấp hơn trong lần chạy này.
 
 Kết quả này cho thấy lỗi kết hợp và lỗi ở trường tiền đáng được ưu tiên phân tích. Tuy nhiên, vì mới có một seed, các chênh lệch nhỏ không nên được gọi là khác biệt có ý nghĩa thống kê. Nhóm chỉ dùng biểu đồ này để chọn hướng phân tích tiếp theo.”
 
-### Slide 12 — Phân bố đáp án — khoảng 45 giây
+### Slide 14 — Phân bố đáp án — khoảng 45 giây
 
 “Gần 49 phần trăm đáp án trong thống kê hiện tại là số hoặc số điện thoại. Đây là một lý do hợp lý khiến lỗi 0/O hoặc mất dấu phân cách có thể làm điểm ANLS giảm nhanh: đáp án ngắn nên chỉ cần sai một ký tự là đã không còn khớp.
 
-Đây mới là phân tích ở mức phân bố, chưa phải bằng chứng nhân quả trên từng mẫu. Tiếp theo, Điền sẽ kiểm tra kỹ hơn sự khác nhau giữa money và date, sau đó demo đường đi từ cấu hình đến CSV và biểu đồ.”
+Đây mới là phân tích ở mức phân bố, chưa phải bằng chứng nhân quả trên từng mẫu. Tiếp theo, Điền sẽ kiểm tra kỹ hơn sự khác nhau giữa money và date, rồi đối chiếu khả năng phục hồi của các phương pháp.”
 
 ---
 
-## Phần 2 — Điền nói slide 13–19 và toàn bộ demo
+## Phần 2 — Điền nói slide 15–21 và toàn bộ demo
 
-### Slide 13 — Money và date — khoảng 55 giây
+### Slide 15 — Money và date — khoảng 55 giây
 
 “Em tiếp tục từ phần phân bố đáp án. Ở đây nhóm so sánh money noise và date noise. Hai loại này dùng cùng xác suất nhiễu 0,30, nhưng mức giảm điểm rất khác nhau: money giảm khoảng 4,99, còn date chỉ giảm khoảng 0,19, chênh gần 27 lần.
 
@@ -118,13 +134,13 @@ Một proxy giải thích là tỷ lệ đáp án liên quan đến tiền hoặ
 
 Một hướng kiểm chứng sau báo cáo là lưu prediction từng mẫu và kiểm tra đúng những mẫu có trường tiền bị thay đổi.”
 
-### Slide 14 — Recovery — khoảng 40 giây
+### Slide 16 — Recovery — khoảng 40 giây
 
 “Biểu đồ này nhìn theo hướng ngược lại: thay vì chỉ xem mô hình mất bao nhiêu điểm, chúng ta xem phương pháp nào phục hồi được bao nhiêu so với baseline.
 
 Trong cả 14 điều kiện L2 ở lần chạy hiện tại, Noisy Aug có ANLS cao hơn Consistency. Tuy nhiên, khi đọc kết quả vẫn phải nhớ khác biệt ngân sách train giữa baseline và Noisy Aug. Vì vậy đây là kết quả mô tả của cấu hình hiện tại, chưa phải kết luận cuối cùng về phương pháp.”
 
-### Slide 15 — Giải thích hai phương pháp — khoảng 50 giây
+### Slide 17 — Giải thích hai phương pháp — khoảng 50 giây
 
 “Noisy Aug xem bản clean và bản noisy như các mẫu huấn luyện bổ sung, rồi tối ưu cross-entropy như bình thường.
 
@@ -156,9 +172,9 @@ Các con số tổng hợp hiện ra là clean 85,34 và noisy trung bình 84,23
 
 ### Bước 4 — Kiểm tra ranking và recovery
 
-“Bây giờ em chuyển sang mục **Mức ảnh hưởng nhiễu**. Biểu đồ này cho thấy mixed noise và money noise nằm ở nhóm gây drop nổi bật, khớp với slide 11.
+“Bây giờ em chuyển sang mục **Mức ảnh hưởng nhiễu**. Biểu đồ này cho thấy mixed noise và money noise nằm ở nhóm gây drop nổi bật, khớp với slide 13.
 
-Sau đó em chuyển sang **Khả năng phục hồi**. Ở đây chúng ta đối chiếu Noisy Aug và Consistency theo từng loại nhiễu, khớp với slide 14.
+Sau đó em chuyển sang **Khả năng phục hồi**. Ở đây chúng ta đối chiếu Noisy Aug và Consistency theo từng loại nhiễu, khớp với slide 16.
 
 Như vậy, demo đã đi đủ ba bước: chọn cấu hình, đọc CSV và xem biểu đồ.”
 
@@ -176,7 +192,7 @@ Lệnh này chỉ tổng hợp kết quả và tạo biểu đồ, không cần 
 
 ---
 
-## Slide 16 — Giới hạn và hướng phát triển — khoảng 45 giây
+## Slide 18 — Giới hạn và hướng phát triển — khoảng 45 giây
 
 “Để diễn giải đúng kết quả cuối kỳ, nhóm ghi nhận ba hướng phát triển.
 
@@ -184,19 +200,19 @@ Thứ nhất là chạy equal-budget giữa baseline và Noisy Aug để tách t
 
 Kết luận hiện tại chỉ áp dụng cho synthetic noise, một seed và benchmark L2; nhóm chưa đánh giá trên OCR engine thật.”
 
-## Slide 17 — Mở rộng sau báo cáo — khoảng 30 giây
+## Slide 19 — Mở rộng sau báo cáo — khoảng 30 giây
 
 “Sau khi benchmark công bằng hoàn tất, nhóm có thể mở rộng sang Adapter Only và RON-NACA. Hai hướng này nằm ngoài phạm vi báo cáo cuối kỳ, nên nhóm không dùng chúng để suy luận hay so sánh với các kết quả đã trình bày.”
 
-## Slide 18 — Kết luận — khoảng 50 giây
+## Slide 20 — Kết luận — khoảng 50 giây
 
-“Tóm lại, nhóm đã xây benchmark ViT5 trên ReceiptVQA, tạo 14 loại nhiễu OCR có kiểm soát và hoàn thành đánh giá L2 cho ba flow.
+“Tóm lại, nhóm đã xây benchmark trên ReceiptVQA, đánh giá ViT5 với ba flow và chạy pilot mT5 cùng BARTpho để kiểm tra tính lặp lại của pattern lỗi. Bộ 14 loại nhiễu OCR được kiểm soát theo severity.
 
 Trong cấu hình đã chạy, Noisy Aug có ANLS tuyệt đối cao nhất và mức giảm thấp hơn baseline. Mixed noise và money noise là hai nhóm cần ưu tiên phân tích. Tuy nhiên, do khác biệt ngân sách train và mới có một seed, các kết quả này vẫn cần được xác nhận bằng equal-budget run và nhiều lần chạy.
 
 Đóng góp chính của nhóm ở giai đoạn này là một quy trình đánh giá độ bền OCR có thể truy vết từ cấu hình đến CSV và biểu đồ.”
 
-## Slide 19 — Cảm ơn — khoảng 15 giây
+## Slide 21 — Cảm ơn — khoảng 15 giây
 
 “Phần trình bày của nhóm em đến đây là kết thúc. Nhóm em xin cảm ơn thầy cô đã theo dõi và xin nhận câu hỏi, góp ý.”
 

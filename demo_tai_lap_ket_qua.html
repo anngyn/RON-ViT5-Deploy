@@ -97,6 +97,8 @@
       <button class="active" data-chart="summary">Tóm tắt phương pháp</button>
       <button data-chart="ranking">Mức ảnh hưởng nhiễu</button>
       <button data-chart="recovery">Khả năng phục hồi</button>
+      <button data-chart="backbone_severity">mT5/BARTpho theo severity</button>
+      <button data-chart="backbone_l3">Noise ranking giữa backbone</button>
     </div>
     <img id="chart" class="chart" src="outputs/results/fig_method_summary.png" alt="Biểu đồ kết quả thực nghiệm">
     <p class="note" id="chart-note">So sánh clean ANLS, ANLS trung bình dưới 14 nhiễu và mức suy giảm của ba phương pháp.</p>
@@ -107,7 +109,7 @@
     <button id="replay">Hiển thị bước tái lập</button>
   </section>
   <div id="status" aria-live="polite"></div>
-  <footer>Nguồn nội bộ: <code>configs/*.yaml</code> và <code>outputs/results/flow{1,2,3}_vit_*_noise_l2.csv</code>. Kết quả thuộc cấu hình/seed đã chạy; chưa có confidence interval.</footer>
+  <footer>Nguồn nội bộ: <code>configs/*.yaml</code>, <code>outputs/results/flow{1,2,3}_vit_*_noise_l2.csv</code> và biểu đồ pilot mT5/BARTpho trong <code>img/</code>. Kết quả thuộc cấu hình/seed đã chạy; chưa có confidence interval.</footer>
 </main>
 
 <script>
@@ -139,6 +141,8 @@ const charts = {
   summary: ["outputs/results/fig_method_summary.png", "So sánh clean ANLS, ANLS trung bình dưới 14 nhiễu và mức suy giảm của ba phương pháp."],
   ranking: ["outputs/results/fig_noise_drop_ranking.png", "Xếp hạng mức suy giảm của ViT5 baseline theo loại nhiễu ở L2; mixed_noise và money_noise nổi bật."],
   recovery: ["outputs/results/fig_recovery.png", "So sánh mức phục hồi của Noisy Aug và Consistency theo từng loại nhiễu; đây là phần dùng để giải thích trade-off."],
+  backbone_severity: ["img/fig_backbone_severity_retention.png", "Pilot mT5 và BARTpho: retention giảm khi severity tăng từ L1 đến L3. Đây là kiểm tra pattern vulnerability, không phải bảng xếp hạng model."],
+  backbone_l3: ["img/fig_backbone_l3_noise_drop.png", "Ở L3, mixed noise đứng đầu và money noise đứng thứ hai trên cả mT5 và BARTpho. Raw CSV/log pilot cần được phục hồi để nâng mức tái lập."],
 };
 document.querySelectorAll('[data-chart]').forEach(b => b.onclick = () => { document.querySelectorAll('[data-chart]').forEach(x=>x.classList.toggle('active',x===b)); const [src,note]=charts[b.dataset.chart]; document.querySelector('#chart').src=src; document.querySelector('#chart-note').textContent=note; });
 document.querySelector('#replay').onclick = () => { const s=document.querySelector('#status'); s.textContent='Bước tái lập: đọc 3 CSV L2 → tổng hợp ANLS/drop → ghi biểu đồ vào outputs/results/.'; };

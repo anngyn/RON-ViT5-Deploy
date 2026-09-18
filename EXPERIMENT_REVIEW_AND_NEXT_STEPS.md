@@ -4,17 +4,17 @@
 
 Kết quả hiện tại **đủ để trình bày trong báo cáo cuối kỳ với phạm vi được xác định rõ**:
 
-> Đánh giá độ bền của ViT5 trước nhiễu OCR tổng hợp ở mức L2 trên ReceiptVQA.
+> Đánh giá độ bền của ViT5 trước nhiễu OCR tổng hợp ở mức L2 trên ReceiptVQA, kèm pilot mT5 và BARTpho để kiểm tra tính lặp lại của pattern vulnerability theo severity.
 
 Tuy nhiên, kết quả **chưa đủ để bảo vệ các kết luận mạnh** về:
 
 - quan hệ nhân quả giữa augmentation và mức tăng ANLS;
 - ý nghĩa thống kê của các chênh lệch nhỏ;
-- khả năng tổng quát sang backbone khác;
+- khả năng tổng quát rộng sang backbone khác ngoài hai pilot;
 - khả năng chống chịu với lỗi của OCR engine thực tế;
 - khả năng tái lập toàn bộ thí nghiệm từ workspace hiện tại.
 
-Ba kết quả ViT5 hiện có là bằng chứng thực nghiệm hữu ích, nhưng nên được xem là kết quả exploratory cho đến khi benchmark được cố định và Flow 4 equal-budget được chạy.
+Ba flow ViT5 là kết quả chính. Các biểu đồ mT5/BARTpho là bằng chứng pilot theo severity và noise ranking; do raw CSV/log không còn trong workspace, không dùng chúng để tuyên bố model nào tốt nhất.
 
 ## 2. Mức độ trả lời các câu hỏi nghiên cứu
 
@@ -23,8 +23,8 @@ Ba kết quả ViT5 hiện có là bằng chứng thực nghiệm hữu ích, nh
 | Noise nào gây hại nhất? | Khá đủ tại L2 | Mixed và money đứng đầu trong một lần đánh giá |
 | Noisy Aug có tốt hơn baseline? | Có bằng chứng quan sát | Avg noisy tăng 2,17 điểm, nhưng training budget gần 2 lần |
 | Consistency có tốt hơn augmentation? | Đủ để mô tả thiết lập đã thử | Aug cao hơn Consistency trên cả 14 noise |
-| Severity L1 đến L3 thay đổi thế nào? | Chưa đủ artifact | Slide có số nhưng thiếu CSV nguồn trong workspace |
-| Kết quả có lặp lại trên backbone khác? | Chưa tái lập được | Thiếu CSV, log và checkpoint mT5/BARTpho |
+| Severity L1 đến L3 thay đổi thế nào? | Có kết quả pilot | mT5 và BARTpho đều giảm retention; raw CSV nguồn cần phục hồi để nâng mức bằng chứng |
+| Kết quả có lặp lại trên backbone khác? | Có tín hiệu pilot | Noise-ranking tương quan cao giữa mT5/BARTpho; chưa đủ để tổng quát rộng |
 | Kết quả có ý nghĩa thống kê? | Chưa | Không có per-sample prediction hoặc confidence interval |
 | Mô hình có bền với OCR thực tế không? | Chưa đánh giá | Chỉ thêm synthetic noise vào Google OCR context có sẵn |
 
@@ -36,7 +36,16 @@ Ba kết quả ViT5 hiện có là bằng chứng thực nghiệm hữu ích, nh
 | ViT5 + Noisy Aug 2x | 85,34 | 84,23 | 1,11 | 98,69% |
 | ViT5 + Consistency | 83,97 | 82,92 | 1,06 | 98,74% |
 
-### 3.1. Cách đọc đúng bảng kết quả
+### 3.1. Kết quả pilot mT5 và BARTpho
+
+| Backbone | Retention L1 | Retention L2 | Retention L3 | Atomic macro drop L1/L2/L3 |
+|---|---:|---:|---:|---:|
+| mT5 | 98,0% | 96,2% | 94,0% | 0,99 / 2,11 / 3,47 |
+| BARTpho | 93,9% | 90,3% | 86,4% | 1,09 / 2,38 / 3,85 |
+
+Noise-ranking giữa hai backbone có Spearman $\rho=0,899$ ở L1, $0,881$ ở L2 và $0,873$ ở L3. Mixed đứng đầu và money đứng thứ hai ở L3. Đây là kết quả pilot được lưu trong các biểu đồ backbone; raw CSV/log tương ứng cần được phục hồi trước khi dùng để khẳng định tổng quát.
+
+### 3.2. Cách đọc đúng bảng kết quả
 
 Không nên chọn phương pháp chỉ dựa trên một đại lượng `drop`:
 
@@ -155,14 +164,14 @@ Nên viết:
 - Checkpoint của ba flow ViT5 không có trong workspace.
 - Phần lớn training log không được lưu.
 
-### Cần phục hồi hoặc loại khỏi báo cáo
+### Cần phục hồi để nâng mức bằng chứng
 
 - CSV nguồn cho mT5 L1/L2/L3.
 - CSV nguồn cho BARTpho L1/L2/L3.
 - Log và config invocation thực tế của các backbone pilot.
 - Checkpoint hoặc checksum tương ứng.
 
-Nếu không phục hồi được các artifact trên, nên bỏ các claim cross-backbone và severity khỏi bản nộp cuối thay vì giữ số liệu chỉ tồn tại dưới dạng hình PNG.
+Các claim cross-backbone và severity hiện được trình bày ở mức pilot, có chú thích rõ nguồn là biểu đồ tổng hợp. Nếu phục hồi được CSV, log và checkpoint, nhóm có thể nâng chúng lên mức kết luận có thể tái lập.
 
 ## 7. Kế hoạch triển khai
 
