@@ -6,13 +6,14 @@ Phân tích tác động của nhiễu OCR lên ViT5 cho bài toán Vietnamese R
 
 | Thành phần | Giá trị |
 |-----------|---------|
-| Model | VietAI/vit5-base (~223M params) |
+| Model chính | VietAI/vit5-base (~223M params) |
+| Backbone pilot | google/mt5-base; vinai/bartpho-syllable-base |
 | Dataset | ReceiptVQA (train 51,886 / dev 6,426 / test 6,500) |
 | Subset ratio | 1.0 (full dataset) |
-| Epochs | 3 (chọn checkpoint theo dev ANLS) |
-| Learning rate | 5e-5 |
+| Thiết lập chính | 3 flow ViT5, 3 epochs, learning rate 5e-5 |
+| Thiết lập pilot | Baseline clean, 14 loại nhiễu, severity L1–L3 |
 | Metric | ANLS (threshold 0.5) |
-| Noise level đánh giá | L2 |
+| Noise level đánh giá | ViT5 tại L2; pilot mT5/BARTpho tại L1–L3 |
 | Generation | beam=4, max_length=64 |
 
 ### 3 Flows

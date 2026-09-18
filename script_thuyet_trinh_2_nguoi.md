@@ -2,7 +2,7 @@
 
 **Phân vai:** Ấn nói liền mạch slide 1–14. Điền nhận từ slide 15 đến slide 21, bao gồm toàn bộ demo. Chỉ chuyển người một lần sau slide 14.
 
-**Thời lượng:** khoảng 16–18 phút, trong đó demo khoảng 4 phút. Người đang nói bật webcam ở góc phải dưới; khi chuyển người chỉ cần nói câu bàn giao, không phải dừng video.
+**Thời lượng:** khoảng 17–19 phút, trong đó demo khoảng 4–5 phút. Người đang nói bật webcam ở góc phải dưới; khi chuyển người chỉ cần nói câu bàn giao, không phải dừng video.
 
 ## Chuẩn bị trước khi quay
 
@@ -72,17 +72,21 @@ Nhóm thứ nhất là sai ký tự, ví dụ nhầm 0 và O. Nhóm thứ hai l�
 
 Ngoài từng loại riêng lẻ, nhóm còn có mixed noise, tức là kết hợp nhiều lỗi trong cùng một mẫu để mô phỏng tình huống OCR xấu hơn.”
 
-### Slide 8 — Thiết lập — khoảng 45 giây
+### Slide 8 — Thiết lập — khoảng 1 phút 10 giây
 
-“Về thiết lập, backbone là ViT5-base. Input được giới hạn 256 token. Chỉ số chính là ANLS với ngưỡng khớp 0,5.
+“Thiết lập thực nghiệm được chia thành hai mức.
 
-Các flow được train trên full data trong ba epoch. Noise generator dùng seed 42 và tất cả phương pháp dùng cùng test set. Những điểm này giúp kết quả có thể đối chiếu trực tiếp, dù chúng ta vẫn phải nhớ rằng hiện tại mới có một seed.”
+Phần thực nghiệm chính dùng ViT5-base để so sánh ba flow: Clean, Noisy Aug và Consistency. Các flow dùng toàn bộ dữ liệu, train ba epoch với learning rate 5 nhân 10 mũ trừ 5, rồi đánh giá đủ 14 loại nhiễu tại L2.
 
-### Slide 9 — Phạm vi đánh giá và đầu ra — khoảng 35 giây
+Phần pilot dùng thêm mT5-base và BARTpho-syllable-base. Với hai backbone này, nhóm lấy baseline huấn luyện trên dữ liệu sạch rồi quét severity từ L1 đến L3. Mục tiêu là xem retention và thứ hạng noise có giữ cùng xu hướng khi đổi backbone hay không, chứ không xếp hạng model thắng thua.
 
-“Trong phạm vi báo cáo cuối kỳ, nhóm đã chạy đủ ba phương pháp và 14 điều kiện nhiễu ở L2. Các đầu ra dùng cho phân tích gồm CSV đánh giá, bảng ranking mức ảnh hưởng của noise và biểu đồ recovery.
+Thiết lập chung dùng cùng split ReceiptVQA, input tối đa 256 token, output 64 token, beam size 4 và ANLS với ngưỡng 0,5. Noise generator dùng seed 42. Kết quả ViT5 có CSV đầy đủ trong checkout; kết quả mT5 và BARTpho hiện được trình bày ở mức pilot từ các biểu đồ tổng hợp.”
 
-Các giới hạn cần ghi rõ là chưa có equal-budget, chưa có nhiều seed và chưa lưu prediction theo từng mẫu. Vì vậy nhóm sẽ phân biệt rõ kết quả quan sát được trong cấu hình này với những giả thuyết chưa thể khẳng định rộng hơn.”
+### Slide 9 — Phạm vi đánh giá và đầu ra — khoảng 50 giây
+
+“Trong phạm vi báo cáo cuối kỳ, nhóm đã chạy đủ ba phương pháp ViT5 và 14 điều kiện nhiễu ở L2. Ngoài ra còn có hai backbone pilot là mT5 và BARTpho được quét từ L1 đến L3. Các đầu ra dùng cho phân tích gồm CSV đánh giá ViT5, bảng ranking mức ảnh hưởng, biểu đồ recovery và hai biểu đồ cross-backbone.
+
+Các giới hạn cần ghi rõ là chưa có equal-budget, chưa có nhiều seed và chưa lưu prediction theo từng mẫu. Raw CSV, log và checkpoint của hai pilot cũng không còn trong checkout hiện tại. Vì vậy nhóm dùng mT5/BARTpho để củng cố pattern quan sát được, chưa dùng chúng để kết luận model nào tốt nhất.”
 
 ### Slide 10 — Kết quả tổng hợp — khoảng 1 phút 20 giây
 
@@ -170,13 +174,17 @@ Cách này giúp chúng ta kiểm tra được con số trên slide lấy từ �
 
 Các con số tổng hợp hiện ra là clean 85,34 và noisy trung bình 84,23. Đây chính là hai con số được dùng trong slide kết quả tổng hợp. Em không chạy lại mô hình ở bước này; trang chỉ đọc và trình bày artifact đã lưu.”
 
-### Bước 4 — Kiểm tra ranking và recovery
+### Bước 4 — Kiểm tra ranking, recovery và cross-backbone
 
 “Bây giờ em chuyển sang mục **Mức ảnh hưởng nhiễu**. Biểu đồ này cho thấy mixed noise và money noise nằm ở nhóm gây drop nổi bật, khớp với slide 13.
 
 Sau đó em chuyển sang **Khả năng phục hồi**. Ở đây chúng ta đối chiếu Noisy Aug và Consistency theo từng loại nhiễu, khớp với slide 16.
 
-Như vậy, demo đã đi đủ ba bước: chọn cấu hình, đọc CSV và xem biểu đồ.”
+Tiếp theo em chọn **mT5/BARTpho theo severity**. Đường biểu diễn cho thấy retention của cả hai backbone đều giảm khi chuyển từ L1 lên L3. Cuối cùng, ở biểu đồ **Noise ranking giữa backbone**, mixed và money vẫn đứng ở nhóm gây suy giảm mạnh nhất.
+
+Hai hình cuối là kết quả pilot tổng hợp. Vì raw CSV và log của mT5/BARTpho không còn trong checkout hiện tại, nhóm chỉ dùng chúng để kiểm tra tính lặp lại của pattern lỗi, không dùng để so sánh model thắng thua.
+
+Như vậy, demo đã đi đủ ba bước: chọn cấu hình ViT5, đọc CSV và đối chiếu các biểu đồ ViT5 lẫn cross-backbone.”
 
 ### Bước 5 — Lệnh tái lập biểu đồ
 
@@ -224,3 +232,4 @@ Trong cấu hình đã chạy, Noisy Aug có ANLS tuyệt đối cao nhất và 
 - **Một seed có đủ mạnh không?** “Chưa đủ cho kết luận thống kê. Bước tiếp theo là prediction từng mẫu và bootstrap confidence interval.”
 - **Noisy Aug tốt hơn do augmentation hay do nhiều update?** “Hiện chưa tách được hai yếu tố. Equal-budget run sẽ trả lời câu hỏi này.”
 - **Vì sao money ảnh hưởng mạnh hơn date?** “Tỷ lệ đáp án số cao hơn là một proxy hợp lý, nhưng chưa phải quan hệ nhân quả. Cần phân tích các mẫu và OCR context bị ảnh hưởng trực tiếp.”
+- **Vì sao không xếp hạng ViT5, mT5 và BARTpho?** “ViT5 là thực nghiệm chính với ba flow tại L2, còn mT5/BARTpho là pilot severity. Ngân sách và mức bằng chứng chưa tương đương, nên nhóm chỉ so sánh pattern lỗi chứ không kết luận model nào tốt nhất.”
